@@ -64,7 +64,7 @@ def scrape_and_update():
     client = gspread.authorize(creds)
     
     # REPLACE WITH YOUR ACTUAL SHEET NAME AND TAB NAME
-    sheet = client.open("YOUR_GOOGLE_SHEET_NAME").worksheet("YOUR_TAB_NAME")
+    sheet = client.open("ipl 2026").worksheet("Sheet1")
     
     print("Uploading data...")
     sheet.clear() # Wipes the old data clean
