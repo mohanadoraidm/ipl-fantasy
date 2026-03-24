@@ -1,86 +1,133 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPL Fantasy League</title>
+    <title>IPL Fantasy 2026</title>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 500px; margin: auto; }
-        header { text-align: center; margin-bottom: 30px; }
-        h1 { color: var(--accent); margin: 0; font-size: 1.5rem; text-transform: uppercase; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 20px; }
+        .team-card { background: var(--card); display: flex; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
+        .team-card:hover { transform: scale(1.02); }
+        .logo { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; background: #334155; }
+        .points { margin-left: auto; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
         
-        /* Leaderboard Styling */
-        .card { background: var(--card); padding: 15px; margin-bottom: 10px; border-radius: 12px; display: flex; align-items: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border-left: 4px solid transparent; transition: 0.3s; }
-        .card.top-3 { border-left-color: #fbbf24; }
-        .rank { font-weight: bold; font-size: 1.2rem; width: 30px; opacity: 0.5; }
-        .info { flex-grow: 1; }
-        .name { font-weight: 600; font-size: 1.1rem; }
-        .points { font-weight: bold; color: var(--accent); font-size: 1.2rem; }
-        
-        /* Refresh Button */
-        #refresh-btn { background: var(--accent); color: var(--bg); border: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; cursor: pointer; display: block; margin: 20px auto; width: 100%; transition: 0.2s; }
-        #refresh-btn:active { transform: scale(0.95); }
-        .loading { text-align: center; opacity: 0.6; font-style: italic; }
+        /* Selection Page */
+        #selection-page { display: none; }
+        .player-row { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #334155; }
+        .role-badge { font-size: 0.7rem; background: #334155; padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
+        .btn { background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        .stats-bar { position: sticky; top: 0; background: var(--bg); padding: 10px; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-around; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>Friends IPL League</h1>
-        <p>Live Impact Points Standings</p>
-    </header>
-
-    <div id="leaderboard">
-        <p class="loading">Fetching latest scores...</p>
+    <div id="home-page">
+        <div class="header"><h1>IPL Leaderboard</h1></div>
+        <div id="team-list">Loading teams...</div>
     </div>
 
-    <button id="refresh-btn" onclick="fetchData()">Refresh Leaderboard</button>
-</div>
+    <div id="selection-page">
+        <div class="stats-bar" id="live-stats">
+            <span>Selected: <b id="count">0</b>/11</span>
+            <span>Foreign: <b id="frgn">0</b>/4</span>
+            <span>Overs: <b id="overs">0</b>/20</span>
+        </div>
+        <div id="player-pool"></div>
+        <button class="btn" onclick="saveSelection()">SAVE TEAM</button>
+        <button class="btn" style="background:#475569" onclick="location.reload()">BACK</button>
+    </div>
 
 <script>
-    // PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-    const API_URL = "https://script.google.com/macros/s/AKfycby61ZZEKhhJgp1ICDeGN6LdlT0_JiQr5o8kZhUSXoysqVPczxrOjbzVr-2Ltte7uRqt0g/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzssop2Rqp-oEu7mY4qQr0c2flRn_0Up8NFvq2xdf7rk4RysuNOdl8uF9gbWyWLYv2H_g/exec";
+    let appData = {};
+    let currentTeam = "";
+    let selectedNames = [];
 
-    async function fetchData() {
-        const list = document.getElementById('leaderboard');
-        const btn = document.getElementById('refresh-btn');
-        
-        btn.innerText = "Updating...";
-        
-        try {
-            const response = await fetch(API_URL);
-            const data = await response.json();
-            
-            // Sort data: Highest points first
-            data.sort((a, b) => b.Total_Points - a.Total_Points); 
-
-            list.innerHTML = ""; // Clear current list
-            
-            data.forEach((friend, index) => {
-                const isTop = index < 3 ? 'top-3' : '';
-                list.innerHTML += `
-                    <div class="card ${isTop}">
-                        <div class="rank">#${index + 1}</div>
-                        <div class="info">
-                            <div class="name">${friend.Friend_Name}</div>
-                        </div>
-                        <div class="points">${Math.round(friend.Total_Points)}</div>
-                    </div>
-                `;
-            });
-        } catch (error) {
-            list.innerHTML = "<p>Error loading data. Check your API URL.</p>";
-        } finally {
-            btn.innerText = "Refresh Leaderboard";
-        }
+    async function init() {
+        const res = await fetch(API_URL);
+        appData = await res.json();
+        renderHome();
     }
 
-    // Load data automatically when page opens
-    fetchData();
-</script>
+    function renderHome() {
+        const list = document.getElementById('team-list');
+        list.innerHTML = appData.teams.map(t => `
+            <div class="team-card" onclick="openSelection('${t.Team_Name}')">
+                <img src="${t.Logo_URL}" class="logo" onerror="this.src='https://via.placeholder.com/50'">
+                <div><b>${t.Team_Name}</b></div>
+                <div class="points">${Math.round(t.Total_Score)} pts</div>
+            </div>
+        `).join('');
+    }
 
+    function openSelection(teamName) {
+        currentTeam = teamName;
+        document.getElementById('home-page').style.display = 'none';
+        document.getElementById('selection-page').style.display = 'block';
+        
+        const players = appData.players.filter(p => p.Team === teamName);
+        selectedNames = players.filter(p => p.Playing_XI === true).map(p => p.Player_Name);
+        
+        renderPlayers(players);
+        updateStats();
+    }
+
+    function renderPlayers(players) {
+        document.getElementById('player-pool').innerHTML = players.map(p => `
+            <div class="player-row">
+                <input type="checkbox" ${selectedNames.includes(p.Player_Name) ? 'checked' : ''} 
+                       onchange="togglePlayer('${p.Player_Name}')">
+                <span style="margin-left:10px">${p.Player_Name}</span>
+                <span class="role-badge">${p.Role}</span>
+                <span style="margin-left:auto">${p.Impact_Points}</span>
+            </div>
+        `).join('');
+    }
+
+    function togglePlayer(name) {
+        if (selectedNames.includes(name)) {
+            selectedNames = selectedNames.filter(n => n !== name);
+        } else {
+            if (selectedNames.length >= 11) { alert("Max 11 players!"); return; }
+            selectedNames.push(name);
+        }
+        updateStats();
+        // Re-render to ensure checkboxes stay in sync if logic changes
+    }
+
+    function updateStats() {
+        let overs = 0, frgn = 0;
+        const players = appData.players.filter(p => selectedNames.includes(p.Player_Name));
+        
+        players.forEach(p => {
+            const code = p.Role.toLowerCase();
+            if(code.includes('f')) frgn++;
+            if(code.includes('bl')) overs += 4;
+            else { 
+                let m = code.match(/\d+/); 
+                if(m) overs += parseInt(m[0]); 
+            }
+        });
+
+        document.getElementById('count').innerText = selectedNames.length;
+        document.getElementById('frgn').innerText = frgn;
+        document.getElementById('overs').innerText = overs;
+    }
+
+    async function saveSelection() {
+        if (selectedNames.length !== 11) return alert("Select exactly 11 players!");
+        // Add your logic checks for 4 foreigners and 20 overs here if you want to block saving
+        
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ teamName: currentTeam, selectedPlayers: selectedNames })
+        });
+        alert("Team Saved Successfully!");
+        location.reload();
+    }
+
+    init();
+</script>
 </body>
 </html>
