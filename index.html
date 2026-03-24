@@ -62,20 +62,26 @@
     }
 
     function openSelection(teamName) {
-        // Clean the teamName from the Leaderboard (e.g., "KXIP ") -> "kxip"
-        const cleanTargetTeam = teamName.toString().trim().toLowerCase();
+        // 1. Clean the team name from the Leaderboard
+        const cleanTarget = teamName.toString().toLowerCase().replace(/\s/g, '');
         currentTeam = teamName.trim(); 
+        
+        console.log("Searching for players in team:", cleanTarget);
         
         document.getElementById('home-page').style.display = 'none';
         document.getElementById('selection-page').style.display = 'block';
         
-        // Find players by cleaning their team column too
+        // 2. Filter players by cleaning their 'Team' column too
         const teamPlayers = appData.players.filter(p => {
-            const pTeam = (p.team || p.team_name || "").toString().trim().toLowerCase();
-            return pTeam === cleanTargetTeam;
+            // Check every possible name for the 'Team' column
+            const rawTeamValue = p.team || p.team_name || p.teamname || "";
+            const cleanPlayerTeam = rawTeamValue.toString().toLowerCase().replace(/\s/g, '');
+            return cleanPlayerTeam === cleanTarget;
         });
+
+        console.log("Found players:", teamPlayers.length);
         
-        // Identify who is already checked
+        // 3. Identify who is already checked
         selectedNames = teamPlayers.filter(p => {
             const status = p.playing_xi || p.playingxi || p.status || "";
             return status === true || status === "TRUE" || status === "Playing";
@@ -84,7 +90,6 @@
         renderPlayers(teamPlayers);
         updateStats();
     }
-
     function renderPlayers(players) {
         const pool = document.getElementById('player-pool');
         if (players.length === 0) {
