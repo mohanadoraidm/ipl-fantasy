@@ -1,0 +1,36 @@
+name: Daily IPL Scraper
+
+# This section tells GitHub WHEN to run the script
+on:
+  schedule:
+    # 18:30 UTC is exactly 12:00 AM (Midnight) IST
+    - cron: '30 18 * * *' 
+  
+  # This enables the manual "Run workflow" button in the Actions tab
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Grab your code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      # 2. Set up a Python environment on the cloud server
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      # 3. Install all the required libraries
+      - name: Install dependencies
+        run: |
+          pip install selenium webdriver-manager gspread oauth2client
+          
+      # 4. Run your scraper script using the secret credentials
+      - name: Run Scraper
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: python scraper.py
