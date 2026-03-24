@@ -66,23 +66,44 @@
         document.getElementById('home-page').style.display = 'none';
         document.getElementById('selection-page').style.display = 'block';
         
-        const players = appData.players.filter(p => p.Team === teamName);
-        selectedNames = players.filter(p => p.Playing_XI === true).map(p => p.Player_Name);
+        // Find players belonging to this team (handling case sensitivity)
+        const teamPlayers = appData.players.filter(p => {
+            const pTeam = p.team || p.team_name || "";
+            return pTeam.toLowerCase() === teamName.toLowerCase();
+        });
         
-        renderPlayers(players);
+        // Find who is already checked (Playing XI)
+        selectedNames = teamPlayers.filter(p => {
+            const status = p.playing_xi || p.playingxi || p.status || "";
+            return status === true || status === "TRUE" || status === "Playing";
+        }).map(p => p.player_name || p.playername || p.name);
+        
+        renderPlayers(teamPlayers);
         updateStats();
     }
 
     function renderPlayers(players) {
-        document.getElementById('player-pool').innerHTML = players.map(p => `
-            <div class="player-row">
-                <input type="checkbox" ${selectedNames.includes(p.Player_Name) ? 'checked' : ''} 
-                       onchange="togglePlayer('${p.Player_Name}')">
-                <span style="margin-left:10px">${p.Player_Name}</span>
-                <span class="role-badge">${p.Role}</span>
-                <span style="margin-left:auto">${p.Impact_Points}</span>
-            </div>
-        `).join('');
+        const pool = document.getElementById('player-pool');
+        if (players.length === 0) {
+            pool.innerHTML = "<p style='padding:20px'>No players found for this team. Check your 'Team' column in Sheet2.</p>";
+            return;
+        }
+
+        pool.innerHTML = players.map(p => {
+            const name = p.player_name || p.playername || p.name || "Unknown";
+            const points = p.impact_points || p.impactpoints || p.points || 0;
+            const role = p.role || p.role_code || "BT";
+
+            return `
+                <div class="player-row">
+                    <input type="checkbox" ${selectedNames.includes(name) ? 'checked' : ''} 
+                           onchange="togglePlayer('${name}')">
+                    <span style="margin-left:10px">${name}</span>
+                    <span class="role-badge">${role}</span>
+                    <span style="margin-left:auto">${points}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     function togglePlayer(name) {
