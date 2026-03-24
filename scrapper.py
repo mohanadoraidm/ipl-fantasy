@@ -16,7 +16,7 @@ def scrape_and_update():
     chrome_options.add_argument("--headless") # Essential so GitHub Actions doesn't crash
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     # --- 2. SCRAPE ESPN ---
@@ -25,13 +25,14 @@ def scrape_and_update():
     driver.get(url)
     
     # Wait 5 seconds to let the JavaScript render the table
-    time.sleep(5) 
+    time.sleep(15) 
 
     print("Extracting data...")
     # Add your column headers as the first row
     extracted_data = [["Player Name", "Total Impact Points"]] 
     
     rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
+    print(f"Successfully found {len(rows)} players on the page!")
 
     for row in rows:
         columns = row.find_elements(By.TAG_NAME, "td")
