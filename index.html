@@ -62,17 +62,20 @@
     }
 
     function openSelection(teamName) {
-        currentTeam = teamName;
+        // Clean the teamName from the Leaderboard (e.g., "KXIP ") -> "kxip"
+        const cleanTargetTeam = teamName.toString().trim().toLowerCase();
+        currentTeam = teamName.trim(); 
+        
         document.getElementById('home-page').style.display = 'none';
         document.getElementById('selection-page').style.display = 'block';
         
-        // Find players belonging to this team (handling case sensitivity)
+        // Find players by cleaning their team column too
         const teamPlayers = appData.players.filter(p => {
-            const pTeam = p.team || p.team_name || "";
-            return pTeam.toLowerCase() === teamName.toLowerCase();
+            const pTeam = (p.team || p.team_name || "").toString().trim().toLowerCase();
+            return pTeam === cleanTargetTeam;
         });
         
-        // Find who is already checked (Playing XI)
+        // Identify who is already checked
         selectedNames = teamPlayers.filter(p => {
             const status = p.playing_xi || p.playingxi || p.status || "";
             return status === true || status === "TRUE" || status === "Playing";
