@@ -31,6 +31,9 @@
 <body>
 
     <div id="home-page">
+        <button onclick="triggerScraper()" style="background:#10b981; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-bottom:15px;">
+        🔄 REFRESH LIVE POINTS
+        </button>
         <div class="header">
             <h1>IPL Leaderboard 2026</h1>
             <p style="color: #94a3b8;">Select a team to manage squad</p>
@@ -218,26 +221,71 @@
         document.getElementById('overs').style.color = totalOvers < 20 ? "orange" : "#38bdf8";
     }
 
-    async function saveSelection() {
-        if (selectedNames.length !== 11) return alert("Please select exactly 11 players.");
-        
-        const btn = document.querySelector('.btn');
-        btn.innerText = "SAVING...";
+    async function triggerScraper() {
+        const btn = event.target;
+        btn.innerText = "⏳ WAKING UP SCRAPER...";
         btn.disabled = true;
 
         try {
             await fetch(API_URL, {
                 method: 'POST',
-                body: JSON.stringify({ teamName: currentTeam, selectedPlayers: selectedNames })
+                body: JSON.stringify({ action: "runScraper" })
             });
-            alert("Team Updated Successfully!");
-            location.reload();
+            alert("Scraper started! It will take about 1-2 minutes for points to update on the website.");
         } catch (e) {
-            alert("Error saving: " + e.message);
+            alert("Failed to start scraper.");
+        }
+        
+        btn.innerText = "🔄 REFRESH LIVE POINTS";
+        btn.disabled = false;
+    }
+
+    async function saveSelection() {
+        // Read the current numbers from the top bar
+        const foreigners = parseInt(document.getElementById('frgn').innerText);
+        const overs = parseInt(document.getElementById('overs').innerText);
+
+        // 1. Rule Validation
+        if (selectedNames.length !== 11) {
+            alert("Please select exactly 11 players!");
+            return;
+        }
+        if (foreigners > 4) {
+            alert(`You have ${foreigners} foreigners. Maximum allowed is 4!`);
+            return;
+        }
+        if (overs < 20) {
+            alert(`You only have ${overs} overs of bowling. Minimum required is 20!`);
+            return;
+        }
+
+        // 2. Visual Feedback (Change button state)
+        const btn = document.querySelector('.btn');
+        btn.innerText = "SAVING TO GOOGLE SHEETS...";
+        btn.disabled = true;
+        btn.style.background = "#94a3b8"; // Gray it out while loading
+
+        // 3. Send to Google Apps Script
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    teamName: currentTeam, 
+                    selectedPlayers: selectedNames 
+                })
+            });
+            
+            alert("Playing XI Saved Successfully!");
+            location.reload(); // Refresh the page to show the updated team
+            
+        } catch (error) {
+            alert("Error saving team: " + error.message);
+            // Reset button if it fails
             btn.innerText = "SAVE PLAYING XI";
             btn.disabled = false;
+            btn.style.background = "var(--accent)";
         }
-    }
+    }}
 
     init();
 </script>
