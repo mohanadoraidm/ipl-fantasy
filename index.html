@@ -145,10 +145,19 @@
     }
 
     function renderPlayers(players) {
-        document.getElementById('player-pool').innerHTML = players.map(p => {
-            const name = p.Player_Name || p.Playername || p.Name || "Unknown";
-            const pts = p.Impact_Points || p.Impactpoints || p.Points || 0;
-            const role = p.Role || p.Role_Code || "BT";
+        const pool = document.getElementById('player-pool');
+        
+        pool.innerHTML = players.map(p => {
+            // GRAB BY POSITION INSTEAD OF NAME:
+            // Object.values(p)[0] is the 1st column (Name)
+            // Object.values(p)[1] is the 2nd column (Points)
+            // Object.values(p)[3] is the 4th column (Role)
+            
+            const values = Object.values(p);
+            const name = values[0] || "Unknown";
+            const pts = values[1] || 0;
+            const role = values[3] || "BT";
+
             return `
                 <div class="player-row">
                     <input type="checkbox" style="transform: scale(1.5)" 
@@ -166,7 +175,11 @@
         if (selectedNames.includes(name)) {
             selectedNames = selectedNames.filter(n => n !== name);
         } else {
-            if (selectedNames.length >= 11) { alert("Squad limit reached! (11/11)"); return; }
+            // Use 11 as the hard limit for the Playing XI
+            if (selectedNames.length >= 11) { 
+                alert("You can only select 11 players for your Playing XI!"); 
+                return; 
+            }
             selectedNames.push(name);
         }
         updateStats(players);
