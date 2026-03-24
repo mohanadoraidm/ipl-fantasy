@@ -1,162 +1,100 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPL Fantasy 2026</title>
-    <style>
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 20px; }
-        .team-card { background: var(--card); display: flex; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
-        .team-card:hover { transform: scale(1.02); }
-        .logo { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; background: #334155; }
-        .points { margin-left: auto; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
-        
-        /* Selection Page */
-        #selection-page { display: none; }
-        .player-row { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #334155; }
-        .role-badge { font-size: 0.7rem; background: #334155; padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
-        .btn { background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 20px; cursor: pointer; }
-        .stats-bar { position: sticky; top: 0; background: var(--bg); padding: 10px; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-around; font-size: 0.8rem; }
-    </style>
-</head>
-<body>
-
-    <div id="home-page">
-        <div class="header"><h1>IPL Leaderboard</h1></div>
-        <div id="team-list">Loading teams...</div>
-    </div>
-
-    <div id="selection-page">
-        <div class="stats-bar" id="live-stats">
-            <span>Selected: <b id="count">0</b>/11</span>
-            <span>Foreign: <b id="frgn">0</b>/4</span>
-            <span>Overs: <b id="overs">0</b>/20</span>
-        </div>
-        <div id="player-pool"></div>
-        <button class="btn" onclick="saveSelection()">SAVE TEAM</button>
-        <button class="btn" style="background:#475569" onclick="location.reload()">BACK</button>
-    </div>
-
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzssop2Rqp-oEu7mY4qQr0c2flRn_0Up8NFvq2xdf7rk4RysuNOdl8uF9gbWyWLYv2H_g/exec";
-    let appData = {};
-    let currentTeam = "";
-    let selectedNames = [];
+    const API_URL = "PASTE_YOUR_WEB_APP_URL_HERE"; 
+    let appData = { teams: [], players: [] };
 
     async function init() {
-        const res = await fetch(API_URL);
-        appData = await res.json();
-        renderHome();
+        const statusDiv = document.getElementById('team-list');
+        try {
+            statusDiv.innerHTML = "Connecting to Google...";
+            const res = await fetch(API_URL);
+            appData = await res.json();
+            
+            // DIAGNOSTIC LOG: This will show in your browser console (F12)
+            console.log("Teams Found:", appData.teams.length);
+            console.log("Players Found:", appData.players.length);
+            
+            if (appData.players.length === 0) {
+                statusDiv.innerHTML = "<b style='color:red'>ERROR: No players found in Sheet2!</b><br>Check if the tab name is exactly 'Sheet2'.";
+                return;
+            }
+
+            renderHome();
+        } catch (err) {
+            statusDiv.innerHTML = "Connection Failed: " + err.message;
+        }
     }
 
     function renderHome() {
         const list = document.getElementById('team-list');
-        list.innerHTML = appData.teams.map(t => `
-            <div class="team-card" onclick="openSelection('${t.Team_Name}')">
-                <img src="${t.Logo_URL}" class="logo" onerror="this.src='https://via.placeholder.com/50'">
-                <div><b>${t.Team_Name}</b></div>
-                <div class="points">${Math.round(t.Total_Score)} pts</div>
-            </div>
-        `).join('');
-    }
-
-    function openSelection(teamName) {
-        // 1. Clean the team name from the Leaderboard
-        const cleanTarget = teamName.toString().toLowerCase().replace(/\s/g, '');
-        currentTeam = teamName.trim(); 
-        
-        console.log("Searching for players in team:", cleanTarget);
-        
-        document.getElementById('home-page').style.display = 'none';
-        document.getElementById('selection-page').style.display = 'block';
-        
-        // 2. Filter players by cleaning their 'Team' column too
-        const teamPlayers = appData.players.filter(p => {
-            // Check every possible name for the 'Team' column
-            const rawTeamValue = p.team || p.team_name || p.teamname || "";
-            const cleanPlayerTeam = rawTeamValue.toString().toLowerCase().replace(/\s/g, '');
-            return cleanPlayerTeam === cleanTarget;
-        });
-
-        console.log("Found players:", teamPlayers.length);
-        
-        // 3. Identify who is already checked
-        selectedNames = teamPlayers.filter(p => {
-            const status = p.playing_xi || p.playingxi || p.status || "";
-            return status === true || status === "TRUE" || status === "Playing";
-        }).map(p => p.player_name || p.playername || p.name);
-        
-        renderPlayers(teamPlayers);
-        updateStats();
-    }
-    function renderPlayers(players) {
-        const pool = document.getElementById('player-pool');
-        if (players.length === 0) {
-            pool.innerHTML = "<p style='padding:20px'>No players found for this team. Check your 'Team' column in Sheet2.</p>";
-            return;
-        }
-
-        pool.innerHTML = players.map(p => {
-            const name = p.player_name || p.playername || p.name || "Unknown";
-            const points = p.impact_points || p.impactpoints || p.points || 0;
-            const role = p.role || p.role_code || "BT";
+        list.innerHTML = appData.teams.map(t => {
+            // Find the Name and Score regardless of capitalization
+            const name = t.Team_Name || t.Teamname || t.teamname || "Unknown";
+            const score = t.Total_Score || t.totalscore || 0;
+            const logo = t.Logo_URL || t.logourl || "";
 
             return `
-                <div class="player-row">
-                    <input type="checkbox" ${selectedNames.includes(name) ? 'checked' : ''} 
-                           onchange="togglePlayer('${name}')">
-                    <span style="margin-left:10px">${name}</span>
-                    <span class="role-badge">${role}</span>
-                    <span style="margin-left:auto">${points}</span>
+                <div class="team-card" onclick="openSelection('${name}')">
+                    <img src="${logo}" class="logo" onerror="this.src='https://via.placeholder.com/50'">
+                    <div><b>${name}</b></div>
+                    <div class="points">${Math.round(score)} pts</div>
                 </div>
             `;
         }).join('');
     }
 
-    function togglePlayer(name) {
-        if (selectedNames.includes(name)) {
-            selectedNames = selectedNames.filter(n => n !== name);
-        } else {
-            if (selectedNames.length >= 11) { alert("Max 11 players!"); return; }
-            selectedNames.push(name);
+    function openSelection(teamName) {
+        const cleanTarget = teamName.trim().toLowerCase();
+        document.getElementById('home-page').style.display = 'none';
+        document.getElementById('selection-page').style.display = 'block';
+        
+        // Let's see what the first player's team looks like for debugging
+        if(appData.players.length > 0) {
+            console.log("Sample Player Team Data:", appData.players[0]);
         }
+
+        const teamPlayers = appData.players.filter(p => {
+            // Check all possible "Team" column headers
+            const pTeam = (p.Team || p.team || p.teamname || "").toString().trim().toLowerCase();
+            return pTeam === cleanTarget;
+        });
+
+        if (teamPlayers.length === 0) {
+            const sample = appData.players[0] ? JSON.stringify(appData.players[0]) : "None";
+            document.getElementById('player-pool').innerHTML = `
+                <div style="padding:20px; color:#f87171">
+                    <h3>No players found for ${teamName}</h3>
+                    <p>The website is looking for "${cleanTarget}"</p>
+                    <p><b>Diagnostic:</b> The first player in your sheet has Team = "${appData.players[0].Team || appData.players[0].team || 'Unknown'}"</p>
+                </div>`;
+            return;
+        }
+
+        // Identify existing selections
+        selectedNames = teamPlayers.filter(p => {
+            const s = p.Playing_XI || p.playingxi || p.Status || "";
+            return s === true || s === "TRUE" || s === "Playing";
+        }).map(p => p.Player_Name || p.Playername || p.playername || p.name);
+
+        renderPlayers(teamPlayers);
         updateStats();
-        // Re-render to ensure checkboxes stay in sync if logic changes
     }
 
-    function updateStats() {
-        let overs = 0, frgn = 0;
-        const players = appData.players.filter(p => selectedNames.includes(p.Player_Name));
-        
-        players.forEach(p => {
-            const code = p.Role.toLowerCase();
-            if(code.includes('f')) frgn++;
-            if(code.includes('bl')) overs += 4;
-            else { 
-                let m = code.match(/\d+/); 
-                if(m) overs += parseInt(m[0]); 
-            }
-        });
-
-        document.getElementById('count').innerText = selectedNames.length;
-        document.getElementById('frgn').innerText = frgn;
-        document.getElementById('overs').innerText = overs;
+    function renderPlayers(players) {
+        document.getElementById('player-pool').innerHTML = players.map(p => {
+            const name = p.Player_Name || p.Playername || p.playername || p.name;
+            const pts = p.Impact_Points || p.impactpoints || p.points || 0;
+            const role = p.Role || p.role || "BT";
+            return `
+                <div class="player-row">
+                    <input type="checkbox" ${selectedNames.includes(name) ? 'checked' : ''} onchange="togglePlayer('${name}')">
+                    <span style="margin-left:10px">${name}</span>
+                    <span class="role-badge">${role}</span>
+                    <span style="margin-left:auto">${pts}</span>
+                </div>
+            `;
+        }).join('');
     }
 
-    async function saveSelection() {
-        if (selectedNames.length !== 11) return alert("Select exactly 11 players!");
-        // Add your logic checks for 4 foreigners and 20 overs here if you want to block saving
-        
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ teamName: currentTeam, selectedPlayers: selectedNames })
-        });
-        alert("Team Saved Successfully!");
-        location.reload();
-    }
-
+    // ... (keep the togglePlayer, updateStats, and saveSelection functions)
     init();
 </script>
-</body>
-</html>
