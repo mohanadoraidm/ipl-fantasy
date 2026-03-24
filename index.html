@@ -1,36 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Fantasy 2026</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; --danger: #ef4444; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 20px; }
+        
+        /* Home Page Styles */
+        .team-card { background: var(--card); display: flex; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+        .team-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .logo { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; background: #334155; object-fit: contain; }
+        .points { margin-left: auto; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+        
+        /* Selection Page Styles */
+        #selection-page { display: none; }
+        .stats-bar { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-around; font-size: 0.85rem; z-index: 10; }
+        .stats-bar b { color: var(--accent); }
+        .player-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #334155; background: #1e293b50; }
+        .role-badge { font-size: 0.7rem; background: #334155; padding: 3px 8px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; }
+        .btn { background: var(--accent); color: #0f172a; border: none; padding: 15px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; font-size: 1rem; }
+        .btn-secondary { background: #475569; margin-top: 10px; }
+        
+        /* Diagnostic Box */
+        .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; margin: 10px 0; font-family: monospace; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div id="home-page">
+        <div class="header">
+            <h1>IPL Leaderboard 2026</h1>
+            <p style="color: #94a3b8;">Select a team to manage squad</p>
+        </div>
+        <div id="team-list">
+            <div style="text-align: center; padding: 50px;">Connecting to Google Sheets...</div>
+        </div>
+    </div>
+
+    <div id="selection-page">
+        <div class="stats-bar">
+            <span>Selected: <b id="count">0</b>/11</span>
+            <span>Foreign: <b id="frgn">0</b>/4</span>
+            <span>Overs: <b id="overs">0</b>/20</span>
+        </div>
+        <div id="player-pool"></div>
+        <button class="btn" onclick="saveSelection()">SAVE PLAYING XI</button>
+        <button class="btn btn-secondary" onclick="location.reload()">CANCEL / BACK</button>
+    </div>
+
 <script>
-    const API_URL = "PASTE_YOUR_WEB_APP_URL_HERE"; 
+    // 1. PASTE YOUR WEB APP URL HERE (Ending in /exec)
+    const API_URL = "https://script.google.com/macros/s/AKfycbzssop2Rqp-oEu7mY4qQr0c2flRn_0Up8NFvq2xdf7rk4RysuNOdl8uF9gbWyWLYv2H_g/exec"; 
+    
     let appData = { teams: [], players: [] };
+    let currentTeam = "";
+    let selectedNames = [];
 
     async function init() {
-        const statusDiv = document.getElementById('team-list');
         try {
-            statusDiv.innerHTML = "Connecting to Google...";
             const res = await fetch(API_URL);
             appData = await res.json();
+            console.log("Full Data Loaded:", appData);
             
-            // DIAGNOSTIC LOG: This will show in your browser console (F12)
-            console.log("Teams Found:", appData.teams.length);
-            console.log("Players Found:", appData.players.length);
-            
-            if (appData.players.length === 0) {
-                statusDiv.innerHTML = "<b style='color:red'>ERROR: No players found in Sheet2!</b><br>Check if the tab name is exactly 'Sheet2'.";
+            if (!appData.players || appData.players.length === 0) {
+                document.getElementById('team-list').innerHTML = `
+                    <div class="error-box">
+                        <b>DIAGNOSTIC ERROR:</b><br>
+                        No data found in 'Sheet2'.<br><br>
+                        1. Is your tab named exactly "Sheet2"?<br>
+                        2. Did you click "Deploy > New Deployment" after adding data?
+                    </div>`;
                 return;
             }
-
             renderHome();
         } catch (err) {
-            statusDiv.innerHTML = "Connection Failed: " + err.message;
+            document.getElementById('team-list').innerHTML = `
+                <div class="error-box">
+                    <b>CONNECTION FAILED:</b><br>${err.message}<br><br>
+                    Check if your Google Script is deployed to "Anyone".
+                </div>`;
         }
     }
 
     function renderHome() {
         const list = document.getElementById('team-list');
         list.innerHTML = appData.teams.map(t => {
-            // Find the Name and Score regardless of capitalization
-            const name = t.Team_Name || t.Teamname || t.teamname || "Unknown";
-            const score = t.Total_Score || t.totalscore || 0;
-            const logo = t.Logo_URL || t.logourl || "";
+            const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
+            const score = t.Total_Score || t.Totalscore || t.Score || 0;
+            const logo = t.Logo_URL || t.Logourl || "";
 
             return `
                 <div class="team-card" onclick="openSelection('${name}')">
@@ -43,58 +103,119 @@
     }
 
     function openSelection(teamName) {
-        const cleanTarget = teamName.trim().toLowerCase();
+        currentTeam = teamName.trim();
+        const cleanTarget = currentTeam.toLowerCase().replace(/\s/g, '');
+        
         document.getElementById('home-page').style.display = 'none';
         document.getElementById('selection-page').style.display = 'block';
+        window.scrollTo(0,0);
         
-        // Let's see what the first player's team looks like for debugging
-        if(appData.players.length > 0) {
-            console.log("Sample Player Team Data:", appData.players[0]);
-        }
-
+        // Filter players with "Fuzzy Match"
         const teamPlayers = appData.players.filter(p => {
-            // Check all possible "Team" column headers
-            const pTeam = (p.Team || p.team || p.teamname || "").toString().trim().toLowerCase();
+            const pTeam = (p.Team || p.Team_Name || p.Teamname || "").toString().toLowerCase().replace(/\s/g, '');
             return pTeam === cleanTarget;
         });
 
         if (teamPlayers.length === 0) {
-            const sample = appData.players[0] ? JSON.stringify(appData.players[0]) : "None";
+            // DIAGNOSTIC VIEW
+            const firstPlayer = appData.players[0];
+            const pKeys = Object.keys(firstPlayer).join(", ");
+            const pTeamValue = firstPlayer.Team || firstPlayer.Team_Name || firstPlayer.Teamname || "NOT FOUND";
+
             document.getElementById('player-pool').innerHTML = `
-                <div style="padding:20px; color:#f87171">
+                <div class="error-box">
                     <h3>No players found for ${teamName}</h3>
-                    <p>The website is looking for "${cleanTarget}"</p>
-                    <p><b>Diagnostic:</b> The first player in your sheet has Team = "${appData.players[0].Team || appData.players[0].team || 'Unknown'}"</p>
+                    <p><b>Searching for:</b> "${cleanTarget}"</p>
+                    <hr>
+                    <p><b>Debug Info:</b> Your Sheet2 columns are: [${pKeys}]</p>
+                    <p><b>First Player's Team in Sheet:</b> "${pTeamValue}"</p>
+                    <p><i>Check if your Column header is named "Team".</i></p>
                 </div>`;
             return;
         }
 
-        // Identify existing selections
+        // Identify existing selected players
         selectedNames = teamPlayers.filter(p => {
-            const s = p.Playing_XI || p.playingxi || p.Status || "";
+            const s = p.Playing_XI || p.Playingxi || p.Status || "";
             return s === true || s === "TRUE" || s === "Playing";
-        }).map(p => p.Player_Name || p.Playername || p.playername || p.name);
+        }).map(p => p.Player_Name || p.Playername || p.Name);
 
         renderPlayers(teamPlayers);
-        updateStats();
+        updateStats(teamPlayers);
     }
 
     function renderPlayers(players) {
         document.getElementById('player-pool').innerHTML = players.map(p => {
-            const name = p.Player_Name || p.Playername || p.playername || p.name;
-            const pts = p.Impact_Points || p.impactpoints || p.points || 0;
-            const role = p.Role || p.role || "BT";
+            const name = p.Player_Name || p.Playername || p.Name || "Unknown";
+            const pts = p.Impact_Points || p.Impactpoints || p.Points || 0;
+            const role = p.Role || p.Role_Code || "BT";
             return `
                 <div class="player-row">
-                    <input type="checkbox" ${selectedNames.includes(name) ? 'checked' : ''} onchange="togglePlayer('${name}')">
-                    <span style="margin-left:10px">${name}</span>
+                    <input type="checkbox" style="transform: scale(1.5)" 
+                        ${selectedNames.includes(name) ? 'checked' : ''} 
+                        onchange="togglePlayer('${name}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
+                    <span style="margin-left:15px; font-weight:500">${name}</span>
                     <span class="role-badge">${role}</span>
-                    <span style="margin-left:auto">${pts}</span>
+                    <span style="margin-left:auto; font-weight:bold; color:var(--accent)">${pts}</span>
                 </div>
             `;
         }).join('');
     }
 
-    // ... (keep the togglePlayer, updateStats, and saveSelection functions)
+    function togglePlayer(name, players) {
+        if (selectedNames.includes(name)) {
+            selectedNames = selectedNames.filter(n => n !== name);
+        } else {
+            if (selectedNames.length >= 11) { alert("Squad limit reached! (11/11)"); return; }
+            selectedNames.push(name);
+        }
+        updateStats(players);
+    }
+
+    function updateStats(allTeamPlayers) {
+        let overs = 0, frgn = 0;
+        const selectedObjects = allTeamPlayers.filter(p => {
+            const pName = p.Player_Name || p.Playername || p.Name;
+            return selectedNames.includes(pName);
+        });
+        
+        selectedObjects.forEach(p => {
+            const role = (p.Role || p.Role_Code || "").toLowerCase();
+            if(role.includes('f')) frgn++;
+            if(role.includes('bl')) overs += 4;
+            else { 
+                let m = role.match(/\d+/); 
+                if(m) overs += parseInt(m[0]); 
+            }
+        });
+
+        document.getElementById('count').innerText = selectedNames.length;
+        document.getElementById('frgn').innerText = frgn;
+        document.getElementById('overs').innerText = overs;
+    }
+
+    async function saveSelection() {
+        if (selectedNames.length !== 11) return alert("Please select exactly 11 players.");
+        
+        const btn = document.querySelector('.btn');
+        btn.innerText = "SAVING...";
+        btn.disabled = true;
+
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ teamName: currentTeam, selectedPlayers: selectedNames })
+            });
+            alert("Team Updated Successfully!");
+            location.reload();
+        } catch (e) {
+            alert("Error saving: " + e.message);
+            btn.innerText = "SAVE PLAYING XI";
+            btn.disabled = false;
+        }
+    }
+
     init();
 </script>
+</body>
+</html>
