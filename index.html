@@ -6,37 +6,30 @@
     <title>IPL Fantasy 2026</title>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; --danger: #ef4444; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 20px; }
-        
-        /* Home Page Styles */
         .team-card { background: var(--card); display: flex; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
         .team-card:hover { border-color: var(--accent); transform: translateY(-2px); }
         .logo { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; background: #334155; object-fit: contain; }
         .points { margin-left: auto; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
-        
-        /* Selection Page Styles */
         #selection-page { display: none; }
         .stats-bar { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-around; font-size: 0.85rem; z-index: 10; }
         .stats-bar b { color: var(--accent); }
         .player-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #334155; background: #1e293b50; }
         .role-badge { font-size: 0.7rem; background: #334155; padding: 3px 8px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; }
         .btn { background: var(--accent); color: #0f172a; border: none; padding: 15px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; font-size: 1rem; }
-        .btn-secondary { background: #475569; margin-top: 10px; }
-        
-        /* Diagnostic Box */
-        .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; margin: 10px 0; font-family: monospace; font-size: 0.9rem; }
+        .btn-secondary { background: #475569; margin-top: 10px; color: white; }
+        .btn-refresh { background:#10b981; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width: 100%; margin-bottom: 20px;}
+        .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; margin: 10px 0; font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div id="home-page">
-        <button onclick="triggerScraper()" style="background:#10b981; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-bottom:15px;">
-        🔄 REFRESH LIVE POINTS
-        </button>
         <div class="header">
             <h1>IPL Leaderboard 2026</h1>
             <p style="color: #94a3b8;">Select a team to manage squad</p>
+            <button class="btn-refresh" onclick="triggerScraper(this)">🔄 REFRESH LIVE POINTS</button>
         </div>
         <div id="team-list">
             <div style="text-align: center; padding: 50px;">Connecting to Google Sheets...</div>
@@ -50,12 +43,12 @@
             <span>Overs: <b id="overs">0</b>/20</span>
         </div>
         <div id="player-pool"></div>
-        <button class="btn" onclick="saveSelection()">SAVE PLAYING XI</button>
+        <button class="btn" onclick="saveSelection(this)">SAVE PLAYING XI</button>
         <button class="btn btn-secondary" onclick="location.reload()">CANCEL / BACK</button>
     </div>
 
 <script>
-    // 1. PASTE YOUR WEB APP URL HERE (Ending in /exec)
+    // PASTE YOUR URL HERE
     const API_URL = "https://script.google.com/macros/s/AKfycby-RzWEh8QFfuwbvfORjgSAqOUNWG4oYLQ7PgW9XcBab_qWLD_a0MLcnCQGA4AZw9KCXQ/exec"; 
     
     let appData = { teams: [], players: [] };
@@ -66,226 +59,122 @@
         try {
             const res = await fetch(API_URL);
             appData = await res.json();
-            console.log("Full Data Loaded:", appData);
             
-            if (!appData.players || appData.players.length === 0) {
-                document.getElementById('team-list').innerHTML = `
-                    <div class="error-box">
-                        <b>DIAGNOSTIC ERROR:</b><br>
-                        No data found in 'Sheet2'.<br><br>
-                        1. Is your tab named exactly "Sheet2"?<br>
-                        2. Did you click "Deploy > New Deployment" after adding data?
-                    </div>`;
+            if (appData.error) {
+                document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Sheet Error:</b> ${appData.error}</div>`;
                 return;
             }
             renderHome();
         } catch (err) {
-            document.getElementById('team-list').innerHTML = `
-                <div class="error-box">
-                    <b>CONNECTION FAILED:</b><br>${err.message}<br><br>
-                    Check if your Google Script is deployed to "Anyone".
-                </div>`;
+            document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Connection Failed:</b> Make sure you copied the correct Web App URL and deployed as "Anyone".</div>`;
         }
     }
 
     function renderHome() {
-        const list = document.getElementById('team-list');
-        list.innerHTML = appData.teams.map(t => {
+        document.getElementById('team-list').innerHTML = appData.teams.map(t => {
             const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
             const score = t.Total_Score || t.Totalscore || t.Score || 0;
             const logo = t.Logo_URL || t.Logourl || "";
-
             return `
                 <div class="team-card" onclick="openSelection('${name}')">
-                    <img src="${logo}" class="logo" onerror="this.src='https://via.placeholder.com/50'">
+                    <img src="${logo}" class="logo" onerror="this.style.display='none'">
                     <div><b>${name}</b></div>
                     <div class="points">${Math.round(score)} pts</div>
-                </div>
-            `;
+                </div>`;
         }).join('');
     }
 
     function openSelection(teamName) {
         currentTeam = teamName.trim();
         const cleanTarget = currentTeam.toLowerCase().replace(/\s/g, '');
-        
         document.getElementById('home-page').style.display = 'none';
         document.getElementById('selection-page').style.display = 'block';
         window.scrollTo(0,0);
         
-        // Filter players with "Fuzzy Match"
         const teamPlayers = appData.players.filter(p => {
             const pTeam = (p.Team || p.Team_Name || p.Teamname || "").toString().toLowerCase().replace(/\s/g, '');
             return pTeam === cleanTarget;
         });
 
-        if (teamPlayers.length === 0) {
-            // DIAGNOSTIC VIEW
-            const firstPlayer = appData.players[0];
-            const pKeys = Object.keys(firstPlayer).join(", ");
-            const pTeamValue = firstPlayer.Team || firstPlayer.Team_Name || firstPlayer.Teamname || "NOT FOUND";
-
-            document.getElementById('player-pool').innerHTML = `
-                <div class="error-box">
-                    <h3>No players found for ${teamName}</h3>
-                    <p><b>Searching for:</b> "${cleanTarget}"</p>
-                    <hr>
-                    <p><b>Debug Info:</b> Your Sheet2 columns are: [${pKeys}]</p>
-                    <p><b>First Player's Team in Sheet:</b> "${pTeamValue}"</p>
-                    <p><i>Check if your Column header is named "Team".</i></p>
-                </div>`;
-            return;
-        }
-
-        // Identify existing selected players
         selectedNames = teamPlayers.filter(p => {
             const s = p.Playing_XI || p.Playingxi || p.Status || "";
             return s === true || s === "TRUE" || s === "Playing";
-        }).map(p => p.Player_Name || p.Playername || p.Name);
+        }).map(p => Object.values(p)[0]); // Get Name
 
         renderPlayers(teamPlayers);
         updateStats(teamPlayers);
     }
 
     function renderPlayers(players) {
-        const pool = document.getElementById('player-pool');
-        
-        pool.innerHTML = players.map(p => {
-            // GRAB BY POSITION INSTEAD OF NAME:
-            // Object.values(p)[0] is the 1st column (Name)
-            // Object.values(p)[1] is the 2nd column (Points)
-            // Object.values(p)[3] is the 4th column (Role)
-            
-            const values = Object.values(p);
-            const name = values[0] || "Unknown";
-            const pts = values[1] || 0;
-            const role = values[3] || "BT";
-
+        document.getElementById('player-pool').innerHTML = players.map(p => {
+            const vals = Object.values(p);
+            const name = vals[0] || "Unknown";
+            const pts = vals[1] || 0;
+            const role = vals[3] || "BT";
             return `
                 <div class="player-row">
-                    <input type="checkbox" style="transform: scale(1.5)" 
-                        ${selectedNames.includes(name) ? 'checked' : ''} 
-                        onchange="togglePlayer('${name}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
+                    <input type="checkbox" style="transform: scale(1.5)" ${selectedNames.includes(name) ? 'checked' : ''} onchange="togglePlayer('${name}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
                     <span style="margin-left:15px; font-weight:500">${name}</span>
                     <span class="role-badge">${role}</span>
                     <span style="margin-left:auto; font-weight:bold; color:var(--accent)">${pts}</span>
-                </div>
-            `;
+                </div>`;
         }).join('');
     }
 
-    function updateStats(allTeamPlayers) {
-        let totalOvers = 0;
-        let foreigners = 0;
-        let openers = 0;
-        let wks = 0;
+    function togglePlayer(name, players) {
+        if (selectedNames.includes(name)) {
+            selectedNames = selectedNames.filter(n => n !== name);
+        } else {
+            if (selectedNames.length >= 11) return alert("Squad limit reached! (11/11)");
+            selectedNames.push(name);
+        }
+        updateStats(players);
+    }
 
-        // Filter out only the 11 players you checked
-        const selectedObjects = allTeamPlayers.filter(p => {
-            const pName = Object.values(p)[0]; // Column A (Name)
-            return selectedNames.includes(pName);
-        });
+    function updateStats(players) {
+        let overs = 0, frgn = 0;
+        const selectedObj = players.filter(p => selectedNames.includes(Object.values(p)[0]));
         
-        selectedObjects.forEach(p => {
-            // Role is in Column D (Index 3)
-            const roleCode = (Object.values(p)[3] || "").toString().toLowerCase();
-            
-            // 1. Foreigner Check (Starts with 'f' or contains 'f')
-            if (roleCode.includes('f')) foreigners++;
-
-            // 2. Opener Check
-            if (roleCode.includes('op')) openers++;
-
-            // 3. Wicketkeeper Check
-            if (roleCode.includes('w')) wks++;
-
-            // 4. Overs Check
-            if (roleCode.includes('bl')) {
-                totalOvers += 4;
-            } else {
-                // Look for a number after 'a' (like a3 or a2)
-                const overMatch = roleCode.match(/a(\d+)/);
-                if (overMatch) {
-                    totalOvers += parseInt(overMatch[1]);
-                }
-            }
+        selectedObj.forEach(p => {
+            const role = (Object.values(p)[3] || "").toString().toLowerCase();
+            if(role.includes('f')) frgn++;
+            if(role.includes('bl')) overs += 4;
+            else { let m = role.match(/a(\d+)/); if(m) overs += parseInt(m[1]); }
         });
 
-        // Update the top UI bar
         document.getElementById('count').innerText = selectedNames.length;
-        document.getElementById('frgn').innerText = foreigners;
-        document.getElementById('overs').innerText = totalOvers;
-
-        // Visual feedback if rules are broken
-        document.getElementById('frgn').style.color = foreigners > 4 ? "red" : "#38bdf8";
-        document.getElementById('overs').style.color = totalOvers < 20 ? "orange" : "#38bdf8";
+        document.getElementById('frgn').innerText = frgn;
+        document.getElementById('overs').innerText = overs;
+        document.getElementById('frgn').style.color = frgn > 4 ? "red" : "var(--accent)";
+        document.getElementById('overs').style.color = overs < 20 ? "orange" : "var(--accent)";
     }
 
-    async function triggerScraper() {
-        const btn = event.target;
-        btn.innerText = "⏳ WAKING UP SCRAPER...";
-        btn.disabled = true;
-
-        try {
-            await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "runScraper" })
-            });
-            alert("Scraper started! It will take about 1-2 minutes for points to update on the website.");
-        } catch (e) {
-            alert("Failed to start scraper.");
-        }
-        
-        btn.innerText = "🔄 REFRESH LIVE POINTS";
-        btn.disabled = false;
-    }
-
-    async function saveSelection() {
-        // Read the current numbers from the top bar
-        const foreigners = parseInt(document.getElementById('frgn').innerText);
+    async function saveSelection(btn) {
+        const frgn = parseInt(document.getElementById('frgn').innerText);
         const overs = parseInt(document.getElementById('overs').innerText);
+        if (selectedNames.length !== 11) return alert("Select exactly 11 players.");
+        if (frgn > 4) return alert("Maximum 4 foreigners allowed.");
+        if (overs < 20) return alert("Minimum 20 overs required.");
 
-        // 1. Rule Validation
-        if (selectedNames.length !== 11) {
-            alert("Please select exactly 11 players!");
-            return;
-        }
-        if (foreigners > 4) {
-            alert(`You have ${foreigners} foreigners. Maximum allowed is 4!`);
-            return;
-        }
-        if (overs < 20) {
-            alert(`You only have ${overs} overs of bowling. Minimum required is 20!`);
-            return;
-        }
-
-        // 2. Visual Feedback (Change button state)
-        const btn = document.querySelector('.btn');
-        btn.innerText = "SAVING TO GOOGLE SHEETS...";
-        btn.disabled = true;
-        btn.style.background = "#94a3b8"; // Gray it out while loading
-
-        // 3. Send to Google Apps Script
+        btn.innerText = "SAVING..."; btn.disabled = true; btn.style.background = "#94a3b8";
         try {
-            await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    teamName: currentTeam, 
-                    selectedPlayers: selectedNames 
-                })
-            });
-            
-            alert("Playing XI Saved Successfully!");
-            location.reload(); // Refresh the page to show the updated team
-            
-        } catch (error) {
-            alert("Error saving team: " + error.message);
-            // Reset button if it fails
-            btn.innerText = "SAVE PLAYING XI";
-            btn.disabled = false;
-            btn.style.background = "var(--accent)";
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ teamName: currentTeam, selectedPlayers: selectedNames }) });
+            alert("Saved Successfully!"); location.reload();
+        } catch (e) {
+            alert("Error: " + e.message); btn.innerText = "SAVE PLAYING XI"; btn.disabled = false; btn.style.background = "var(--accent)";
         }
-    }}
+    }
+
+    async function triggerScraper(btn) {
+        btn.innerText = "⏳ STARTING..."; btn.disabled = true; btn.style.background = "#94a3b8";
+        try {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "runScraper" }) });
+            alert("Scraper started! Wait ~2 mins then refresh.");
+        } catch (e) {
+            alert("Failed to start.");
+        }
+        btn.innerText = "🔄 REFRESH LIVE POINTS"; btn.disabled = false; btn.style.background = "#10b981";
+    }
 
     init();
 </script>
