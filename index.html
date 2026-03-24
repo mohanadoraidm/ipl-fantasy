@@ -171,40 +171,51 @@
         }).join('');
     }
 
-    function togglePlayer(name, players) {
-        if (selectedNames.includes(name)) {
-            selectedNames = selectedNames.filter(n => n !== name);
-        } else {
-            // Use 11 as the hard limit for the Playing XI
-            if (selectedNames.length >= 11) { 
-                alert("You can only select 11 players for your Playing XI!"); 
-                return; 
-            }
-            selectedNames.push(name);
-        }
-        updateStats(players);
-    }
-
     function updateStats(allTeamPlayers) {
-        let overs = 0, frgn = 0;
+        let totalOvers = 0;
+        let foreigners = 0;
+        let openers = 0;
+        let wks = 0;
+
+        // Filter out only the 11 players you checked
         const selectedObjects = allTeamPlayers.filter(p => {
-            const pName = p.Player_Name || p.Playername || p.Name;
+            const pName = Object.values(p)[0]; // Column A (Name)
             return selectedNames.includes(pName);
         });
         
         selectedObjects.forEach(p => {
-            const role = (p.Role || p.Role_Code || "").toLowerCase();
-            if(role.includes('f')) frgn++;
-            if(role.includes('bl')) overs += 4;
-            else { 
-                let m = role.match(/\d+/); 
-                if(m) overs += parseInt(m[0]); 
+            // Role is in Column D (Index 3)
+            const roleCode = (Object.values(p)[3] || "").toString().toLowerCase();
+            
+            // 1. Foreigner Check (Starts with 'f' or contains 'f')
+            if (roleCode.includes('f')) foreigners++;
+
+            // 2. Opener Check
+            if (roleCode.includes('op')) openers++;
+
+            // 3. Wicketkeeper Check
+            if (roleCode.includes('w')) wks++;
+
+            // 4. Overs Check
+            if (roleCode.includes('bl')) {
+                totalOvers += 4;
+            } else {
+                // Look for a number after 'a' (like a3 or a2)
+                const overMatch = roleCode.match(/a(\d+)/);
+                if (overMatch) {
+                    totalOvers += parseInt(overMatch[1]);
+                }
             }
         });
 
+        // Update the top UI bar
         document.getElementById('count').innerText = selectedNames.length;
-        document.getElementById('frgn').innerText = frgn;
-        document.getElementById('overs').innerText = overs;
+        document.getElementById('frgn').innerText = foreigners;
+        document.getElementById('overs').innerText = totalOvers;
+
+        // Visual feedback if rules are broken
+        document.getElementById('frgn').style.color = foreigners > 4 ? "red" : "#38bdf8";
+        document.getElementById('overs').style.color = totalOvers < 20 ? "orange" : "#38bdf8";
     }
 
     async function saveSelection() {
