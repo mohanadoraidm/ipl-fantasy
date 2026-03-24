@@ -37,7 +37,7 @@ def scrape_and_update():
         columns = row.find_elements(By.TAG_NAME, "td")
         if len(columns) >= 2:
             player_name = columns[0].text
-            impact_points = columns[4].text # Adjust this index if the points are in a different column
+            impact_points = columns[2].text # Adjust this index if the points are in a different column
             extracted_data.append([player_name, impact_points])
 
     driver.quit()
