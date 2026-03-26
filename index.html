@@ -83,16 +83,35 @@
         }
     }
 
-    function renderHome() {
-        document.getElementById('team-list').innerHTML = appData.teams.map(t => {
+   function renderHome() {
+        // 1. Sort the teams mathematically from Highest Score to Lowest Score
+        const sortedTeams = [...appData.teams].sort((a, b) => {
+            const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
+            const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
+            return scoreB - scoreA; 
+        });
+
+        document.getElementById('team-list').innerHTML = sortedTeams.map((t, index) => {
             const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
-            const score = t.Total_Score || t.Totalscore || t.Score || 0;
+            const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
             const logo = t.Logo_URL || t.Logourl || "";
+
+            // 2. Create the "Champion Highlight" for the 1st place team
+            let cardStyle = "";
+            let crown = "";
+            
+            if (index === 0) {
+                // The #1 Team gets a gold border, slight glow, and dark gold gradient
+                cardStyle = "border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); transform: scale(1.02); background: linear-gradient(145deg, #1e293b, #382504);";
+                crown = `<span style="font-size: 1.8rem; margin-right: 12px; filter: drop-shadow(0 0 5px gold);">👑</span>`;
+            }
+
             return `
-                <div class="team-card" onclick="openSelection('${name}')">
+                <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
                     <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                    <div><b>${name}</b></div>
-                    <div class="points">${Math.round(score)} pts</div>
+                    ${crown}
+                    <div style="font-size: 1.1rem;"><b>${name}</b></div>
+                    <div class="points" style="${index === 0 ? 'color: #fbbf24;' : ''}">${Math.round(score)} pts</div>
                 </div>`;
         }).join('');
     }
@@ -110,8 +129,9 @@
         });
 
         selectedNames = teamPlayers.filter(p => {
-            const s = p.Playing_XI || p.Playingxi || p.Status || "";
-            return s === true || s === "TRUE" || s === "Playing";
+            // Now it will successfully find the "Playing" column!
+            const s = p.Playing || p.Playing_XI || p.Status || "";
+            return s === true || s === "TRUE" || s === "true" || s === 1;
         }).map(p => Object.values(p)[0]); // Get Name
 
         renderPlayers(teamPlayers);
