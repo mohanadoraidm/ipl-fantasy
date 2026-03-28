@@ -26,6 +26,39 @@
         .btn-secondary { background: #475569; margin-top: 10px; color: white; }
         .btn-refresh { background:#10b981; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width: 100%; margin-bottom: 20px;}
         .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; margin: 10px 0; font-family: monospace; }
+        /* COMPACT GRID LAYOUT FOR PLAYERS */
+        #player-pool {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2 columns side-by-side */
+            gap: 8px; /* Space between boxes */
+            padding: 10px 0;
+        }
+        
+        .player-row { 
+            display: flex; 
+            align-items: center; 
+            padding: 8px 6px; /* Tighter padding */
+            background: #1e293b50; 
+            border: 1px solid #334155;
+            border-radius: 8px;
+            font-size: 0.85rem; /* Slightly smaller text */
+        }
+
+        .player-name {
+            margin-left: 6px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 85px; /* Prevents long names from breaking the box */
+        }
+
+        .pts-val {
+            margin-left: auto;
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -139,17 +172,45 @@
     }
 
     function renderPlayers(players) {
-        document.getElementById('player-pool').innerHTML = players.map(p => {
+        // Sort: Checked players at the top
+        const sortedPlayers = [...players].sort((a, b) => {
+            const nameA = Object.values(a)[0];
+            const nameB = Object.values(b)[0];
+            const isASelected = selectedNames.includes(nameA);
+            const isBSelected = selectedNames.includes(nameB);
+            if (isASelected && !isBSelected) return -1;
+            if (!isASelected && isBSelected) return 1;
+            return 0; 
+        });
+
+        document.getElementById('player-pool').innerHTML = sortedPlayers.map(p => {
             const vals = Object.values(p);
-            const name = vals[0] || "Unknown";
+            const fullName = vals[0] || "Unknown";
             const pts = vals[1] || 0;
             const role = vals[3] || "BT";
+            
+            const isChecked = selectedNames.includes(fullName);
+            
+            // Abbreviate the last name to fit the 2-column grid (e.g., "Virat K.")
+            const nameParts = fullName.split(' ');
+            const shortName = nameParts.length > 1 
+                ? `${nameParts[0]} ${nameParts[nameParts.length-1].charAt(0)}.` 
+                : fullName;
+
+            // Highlight border for selected players
+            const rowStyle = isChecked 
+                ? "background: rgba(56, 189, 248, 0.15); border-color: var(--accent);" 
+                : "";
+
             return `
-                <div class="player-row">
-                    <input type="checkbox" style="transform: scale(1.5)" ${selectedNames.includes(name) ? 'checked' : ''} onchange="togglePlayer('${name}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
-                    <span style="margin-left:15px; font-weight:500">${name}</span>
+                <div class="player-row" style="${rowStyle}">
+                    <input type="checkbox" style="transform: scale(1.2); flex-shrink: 0;" 
+                        ${isChecked ? 'checked' : ''} 
+                        onchange="togglePlayer('${fullName}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
+                    
+                    <span class="player-name" title="${fullName}">${shortName}</span>
                     <span class="role-badge">${role}</span>
-                    <span style="margin-left:auto; font-weight:bold; color:var(--accent)">${pts}</span>
+                    <span class="pts-val">${Math.round(pts)}</span>
                 </div>`;
         }).join('');
     }
