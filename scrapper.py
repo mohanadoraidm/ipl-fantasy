@@ -21,7 +21,7 @@ def scrape_and_update():
 
     # --- 2. SCRAPE ESPN ---
     print("Loading ESPNcricinfo...")
-    url = "https://www.espncricinfo.com/series/ipl-2025-1449924/most-valuable-players"
+    url = "https://www.espncricinfo.com/series/ipl-2026-1510719/most-valuable-players"
     driver.get(url)
     
     # Wait 5 seconds to let the JavaScript render the table
