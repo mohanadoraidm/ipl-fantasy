@@ -279,34 +279,64 @@
     }
 
    function renderHome() {
-        const sortedTeams = [...appData.teams].sort((a, b) => {
-            const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
-            const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
-            return scoreB - scoreA; 
-        });
-
-        document.getElementById('team-list').innerHTML = sortedTeams.map((t, index) => {
-            const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
-            const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
-            const logo = t.Logo_URL || t.Logourl || "";
-
-            let cardStyle = "";
-            let crown = "";
-            
-            if (index === 0) {
-                cardStyle = "border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); transform: scale(1.02); background: linear-gradient(145deg, #1e293b, #382504);";
-                crown = `<span style="font-size: 1.8rem; margin-right: 12px; filter: drop-shadow(0 0 5px gold);">👑</span>`;
-            }
-
-            return `
-                <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
-                    <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                    ${crown}
-                    <div style="font-size: 1.1rem;"><b>${name}</b></div>
-                    <div class="points" style="${index === 0 ? 'color: #fbbf24;' : ''}">${Math.round(score)} pts</div>
-                </div>`;
-        }).join('');
+    // 1. Create the Prediction Bar Graph HTML
+    let predictionHtml = "";
+    if (appData.leaderboard && appData.leaderboard.length > 0) {
+        const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
+        
+        predictionHtml = `
+            <div style="background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #334155;">
+                <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8; display: flex; align-items: center;">
+                    🏆 Prediction Standings
+                </h3>
+                ${appData.leaderboard.map(f => {
+                    const width = (f.wins / maxWins) * 100;
+                    return `
+                        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                            <div style="width: 75px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
+                            <div style="flex: 1; background: #0f172a; height: 12px; border-radius: 6px; margin: 0 10px; overflow: hidden;">
+                                <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); transition: width 1s;"></div>
+                            </div>
+                            <div style="width: 20px; font-size: 0.85rem; font-weight: bold; color: var(--accent);">${f.wins}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
+
+    // 2. Sort and Render Fantasy Teams
+    const sortedTeams = [...appData.teams].sort((a, b) => {
+        const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
+        const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
+        return scoreB - scoreA; 
+    });
+
+    const teamsHtml = sortedTeams.map((t, index) => {
+        const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
+        const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
+        const logo = t.Logo_URL || t.Logourl || "";
+
+        let cardStyle = "";
+        let crown = "";
+        
+        if (index === 0) {
+            cardStyle = "border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); transform: scale(1.02); background: linear-gradient(145deg, #1e293b, #382504);";
+            crown = `<span style="font-size: 1.8rem; margin-right: 12px; filter: drop-shadow(0 0 5px gold);">👑</span>`;
+        }
+
+        return `
+            <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
+                <img src="${logo}" class="logo" onerror="this.style.display='none'">
+                ${crown}
+                <div style="font-size: 1.1rem;"><b>${name}</b></div>
+                <div class="points" style="${index === 0 ? 'color: #fbbf24;' : ''}">${Math.round(score)} pts</div>
+            </div>`;
+    }).join('');
+
+    // Combine both sections
+    document.getElementById('team-list').innerHTML = predictionHtml + teamsHtml;
+}
 
     function openSelection(teamName) {
         currentTeam = teamName.trim();
