@@ -80,9 +80,6 @@
                     🔄 REFRESH POINTS
                 </button>
                 
-                <button class="btn-refresh" style="margin-bottom: 0; background: #3b82f6;" onclick="openPredictions()">
-                    🔮 PREDICT MATCHES
-                </button>
             </div>
         </div>
         
@@ -279,33 +276,38 @@
     }
 
    function renderHome() {
-    // 1. Create the Prediction Bar Graph HTML
+    console.log("Leaderboard Data:", appData.leaderboard); // Check your browser console!
+
     let predictionHtml = "";
+    
+    // Check if leaderboard exists and has data
     if (appData.leaderboard && appData.leaderboard.length > 0) {
         const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
         
         predictionHtml = `
             <div style="background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #334155;">
-                <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8; display: flex; align-items: center;">
-                    🏆 Prediction Standings
-                </h3>
-                ${appData.leaderboard.map(f => {
-                    const width = (f.wins / maxWins) * 100;
-                    return `
-                        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                            <div style="width: 75px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
-                            <div style="flex: 1; background: #0f172a; height: 12px; border-radius: 6px; margin: 0 10px; overflow: hidden;">
-                                <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); transition: width 1s;"></div>
+                <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8;">🏆 Prediction Standings</h3>
+                <div id="chart-content">
+                    ${appData.leaderboard.map(f => {
+                        const width = (f.wins / maxWins) * 100;
+                        return `
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div style="width: 75px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
+                                <div style="flex: 1; background: #0f172a; height: 12px; border-radius: 6px; margin: 0 10px; overflow: hidden;">
+                                    <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 6px;"></div>
+                                </div>
+                                <div style="width: 25px; font-size: 0.85rem; font-weight: bold; color: var(--accent); text-align: right;">${f.wins}</div>
                             </div>
-                            <div style="width: 20px; font-size: 0.85rem; font-weight: bold; color: var(--accent);">${f.wins}</div>
-                        </div>
-                    `;
-                }).join('')}
+                        `;
+                    }).join('')}
+                </div>
             </div>
         `;
+    } else {
+        // If the graph is missing, this message will help us troubleshoot
+        predictionHtml = `<div style="text-align:center; color:#475569; margin-bottom:20px;">(Prediction data loading...)</div>`;
     }
 
-    // 2. Sort and Render Fantasy Teams
     const sortedTeams = [...appData.teams].sort((a, b) => {
         const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
         const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
@@ -316,25 +318,16 @@
         const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
         const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
         const logo = t.Logo_URL || t.Logourl || "";
-
-        let cardStyle = "";
-        let crown = "";
-        
-        if (index === 0) {
-            cardStyle = "border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); transform: scale(1.02); background: linear-gradient(145deg, #1e293b, #382504);";
-            crown = `<span style="font-size: 1.8rem; margin-right: 12px; filter: drop-shadow(0 0 5px gold);">👑</span>`;
-        }
+        let cardStyle = index === 0 ? "border: 2px solid #fbbf24; background: linear-gradient(145deg, #1e293b, #382504);" : "";
 
         return `
             <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
                 <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                ${crown}
                 <div style="font-size: 1.1rem;"><b>${name}</b></div>
-                <div class="points" style="${index === 0 ? 'color: #fbbf24;' : ''}">${Math.round(score)} pts</div>
+                <div class="points">${Math.round(score)} pts</div>
             </div>`;
     }).join('');
 
-    // Combine both sections
     document.getElementById('team-list').innerHTML = predictionHtml + teamsHtml;
 }
 
