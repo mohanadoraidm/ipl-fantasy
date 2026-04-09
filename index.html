@@ -91,6 +91,31 @@
         <button class="btn" onclick="saveSelection(this)">SAVE PLAYING XI</button>
         <button class="btn btn-secondary" onclick="location.reload()">CANCEL / BACK</button>
     </div>
+    <div id="prediction-page" style="display: none;">
+        <div class="header">
+            <h1>Match Predictions</h1>
+            
+            <select id="user-selector" style="background:#1e293b; color:white; border:1px solid var(--accent); padding:10px; border-radius:8px; width:100%; max-width:300px; font-size:1.1rem; margin-top:10px; text-align:center;">
+                <option value="Mohan">Playing as: Mohan</option>
+                <option value="Hemanth">Playing as: Hemanth</option>
+                <option value="Adhith">Playing as: Adhith</option>
+                <option value="Muthu">Playing as: Muthu</option>
+                <option value="Saran">Playing as: Saran</option>
+            </select>
+        </div>
+
+        <div class="team-card" style="flex-direction: column; text-align: center;">
+            <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 10px;">03/04/2026 - 19:30 IST</div>
+            <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 15px;">CSK vs PBKS</div>
+            
+            <div style="display: flex; gap: 10px; width: 100%;">
+                <button class="btn" style="margin-top:0; background:#fbbf24;" onclick="submitPrediction('CSK', 'PBKS', 'CSK', this)">WIN CSK</button>
+                <button class="btn" style="margin-top:0; background:#ef4444;" onclick="submitPrediction('CSK', 'PBKS', 'PBKS', this)">WIN PBKS</button>
+            </div>
+        </div>
+
+        <button class="btn btn-secondary" onclick="document.getElementById('prediction-page').style.display='none'; document.getElementById('home-page').style.display='block';">BACK TO HOME</button>
+    </div>
 
 <script>
     // PASTE YOUR URL HERE
@@ -120,6 +145,48 @@
             renderHome();
         } catch (err) {
             document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Connection Failed:</b> Make sure you copied the correct Web App URL and deployed as "Anyone".</div>`;
+        }
+    }
+
+    async function submitPrediction(home, away, pick, btnElement) {
+        const user = document.getElementById('user-selector').value;
+        const originalText = btnElement.innerText;
+        const originalBg = btnElement.style.background;
+        
+        btnElement.innerText = "SAVING...";
+        btnElement.style.background = "#94a3b8";
+        btnElement.disabled = true;
+
+        const payload = {
+            action: "savePrediction",
+            user: user,
+            homeTeam: home,
+            awayTeam: away,
+            prediction: pick
+        };
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                alert("Prediction Locked In!");
+                btnElement.innerText = "✅ SAVED";
+                btnElement.style.background = "#10b981"; // Green
+            } else {
+                alert(result.error); // This will show the 7:30 PM lock error!
+                btnElement.innerText = originalText;
+                btnElement.style.background = originalBg;
+                btnElement.disabled = false;
+            }
+        } catch (err) {
+            alert("Network Error: Could not reach database.");
+            btnElement.innerText = originalText;
+            btnElement.style.background = originalBg;
+            btnElement.disabled = false;
         }
     }
 
