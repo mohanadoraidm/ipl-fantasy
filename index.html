@@ -245,25 +245,37 @@
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
-            const result = await res.json();
             
-            if (result.success) {
-                alert("Prediction Locked In!");
-                btnElement.innerText = "✅ SAVED";
-                btnElement.style.background = "#10b981"; 
-                // In the future: update the local state and re-render here
-            } else {
-                alert(result.error); 
+            // Get the raw text from Google first before trying to parse it
+            const rawResponse = await res.text(); 
+            
+            try {
+                const result = JSON.parse(rawResponse);
+                if (result.success) {
+                    alert("Prediction Locked In!");
+                    btnElement.innerText = "✅ SAVED";
+                    btnElement.style.background = "#10b981"; 
+                } else {
+                    alert(result.error); 
+                    btnElement.innerText = originalText;
+                    btnElement.style.background = originalBg;
+                    btnElement.disabled = false;
+                }
+            } catch (parseError) {
+                // If Google sends an HTML error page or raw text, show it!
+                alert("Backend Error: " + rawResponse);
                 btnElement.innerText = originalText;
                 btnElement.style.background = originalBg;
                 btnElement.disabled = false;
             }
+
         } catch (err) {
             alert("Network Error: Could not reach database.");
             btnElement.innerText = originalText;
             btnElement.style.background = originalBg;
             btnElement.disabled = false;
         }
+        
     }
 
    function renderHome() {
