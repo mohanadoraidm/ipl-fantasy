@@ -421,28 +421,42 @@
             if (isASelected && !isBSelected) return -1;
             if (!isASelected && isBSelected) return 1;
             
-            // If both are selected or both are unselected, sort by points
             const ptsA = parseFloat(Object.values(a)[1]) || 0;
             const ptsB = parseFloat(Object.values(b)[1]) || 0;
+            return ptsB - ptsA; 
+        });
 
-            document.getElementById('player-pool').innerHTML = sortedPlayers.map(p => {
+        document.getElementById('player-pool').innerHTML = sortedPlayers.map(p => {
             const vals = Object.values(p);
             const fullName = vals[0] || "Unknown";
-            const pts = parseFloat(vals[1]).toFixed(1) || "0.0"; 
-            const team = (vals[2] || "").toString().trim().toUpperCase(); // Grab their Team
+            
+            // Safe Number Parsing (Prevents crashes if points are empty)
+            let rawPts = parseFloat(vals[1]);
+            const pts = isNaN(rawPts) ? "0.0" : rawPts.toFixed(1); 
+            
+            const team = (vals[2] || "").toString().trim().toUpperCase(); 
             const role = vals[3] || "BT";
             const isFrgn = role.toLowerCase().includes('f');
             const isChecked = selectedNames.includes(fullName);
             
-            // --- NEW: CHECK IF PLAYING TODAY ---
-            // For testing, we will pretend today is "09/04/2026" (Match 1 in your schedule)
-            const todayDateString = "09/04/2026"; 
-            const isPlayingToday = matchSchedule.some(m => 
-                m.date.includes(todayDateString) && (m.home === team || m.away === team)
-            );
+            // --- CRASH-PROOF "PLAYING TODAY" CHECK ---
+            let isPlayingToday = false;
+            try {
+                // We define a fallback schedule right here in case the global one was deleted
+                const activeSchedule = typeof matchSchedule !== 'undefined' ? matchSchedule : [
+                    { date: "09/04/2026", home: "KKR", away: "LSG" } // Fallback mock data
+                ];
+                
+                const todayDateString = "09/04/2026"; // Change to today's date when live
+                isPlayingToday = activeSchedule.some(m => 
+                    m.date && m.date.includes(todayDateString) && (m.home === team || m.away === team)
+                );
+            } catch (error) {
+                console.warn("Playing Today check skipped due to error.");
+            }
             
             const dotHtml = isPlayingToday ? `<span class="playing-today-dot" title="Playing Today!"></span>` : ``;
-            // ------------------------------------
+            // ------------------------------------------
 
             const rowStyle = isChecked ? "background: rgba(56, 189, 248, 0.15); border-color: var(--accent);" : "";
             const badgeStyle = isFrgn ? "background: #ef4444; color: white;" : "background: #334155; color: #94a3b8;";
@@ -455,14 +469,13 @@
                     
                     <span class="player-name" title="${fullName}">${dotHtml}${fullName}</span>
                     
-                    <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
                         <span class="role-badge" style="${badgeStyle}">${role}</span>
                         <span class="pts-val">${pts}</span>
                     </div>
                 </div>`;
         }).join('');
-            return ptsB - ptsA; 
-        });
+    }
 
         document.getElementById('player-pool').innerHTML = sortedPlayers.map(p => {
             const vals = Object.values(p);
