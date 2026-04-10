@@ -135,13 +135,14 @@
                     ${appData.leaderboard.map(f => {
                         const width = (f.wins / maxWins) * 100;
                         return `
-                <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
-                    <div style="display: flex; align-items: center; flex: 1;">
-                        <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                        <div style="font-size: 0.9rem; font-weight: bold; color: #f8fafc;">${index === 0 ? '👑 ' : ''}${name}</div>
-                    </div>
-                    <div style="font-size: 0.95rem; font-weight: bold; ${index === 0 ? (currentLeaderboardView === 'weekly' ? 'color:#10b981;' : 'color:#fbbf24;') : 'color: var(--accent);'}">${Math.round(score)} pts</div>
-                </div>`;
+                            <div style="display: flex; align-items: center; margin-bottom: 4px; height: 12px;">
+                                <div style="width: 50px; font-size: 0.7rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
+                                <div style="flex: 1; background: #0f172a; height: 8px; border-radius: 4px; margin: 0 5px;">
+                                    <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 4px;"></div>
+                                </div>
+                                <div style="width: 20px; font-size: 0.75rem; font-weight: bold; color: var(--accent); text-align: right;">${f.wins}</div>
+                            </div>
+                        `;
                     }).join('')}
                 </div>
             `;
@@ -155,7 +156,7 @@
             </div>
         `;
 
-        // 3. 2-COLUMN TEAM GRID
+        // 3. 1-COLUMN VERTICAL TEAM LIST (with logos)
         const sortedTeams = [...appData.teams].sort((a, b) => {
             if (currentLeaderboardView === 'weekly') {
                 return parseFloat(b.Week_Score || b.Weekscore || 0) - parseFloat(a.Week_Score || a.Weekscore || 0);
@@ -167,6 +168,7 @@
         document.getElementById('team-list').innerHTML = sortedTeams.map((t, index) => {
             const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
             const score = currentLeaderboardView === 'weekly' ? (parseFloat(t.Week_Score || t.Weekscore) || 0) : (parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0);
+            const logo = t.Logo_URL || t.Logourl || "";
             
             let cardStyle = "";
             if (index === 0) {
@@ -177,8 +179,11 @@
 
             return `
                 <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
-                    <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 2px; color: #f8fafc;">${index === 0 ? '👑 ' : ''}${name}</div>
-                    <div style="font-size: 0.9rem; font-weight: bold; ${index === 0 ? (currentLeaderboardView === 'weekly' ? 'color:#10b981;' : 'color:#fbbf24;') : 'color: var(--accent);'}">${Math.round(score)} pts</div>
+                    <div style="display: flex; align-items: center; flex: 1;">
+                        <img src="${logo}" class="logo" onerror="this.style.display='none'">
+                        <div style="font-size: 0.9rem; font-weight: bold; color: #f8fafc;">${index === 0 ? '👑 ' : ''}${name}</div>
+                    </div>
+                    <div style="font-size: 0.95rem; font-weight: bold; ${index === 0 ? (currentLeaderboardView === 'weekly' ? 'color:#10b981;' : 'color:#fbbf24;') : 'color: var(--accent);'}">${Math.round(score)} pts</div>
                 </div>`;
         }).join('');
     }
