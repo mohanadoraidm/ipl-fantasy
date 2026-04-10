@@ -10,186 +10,63 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-status-bar" content="#0f172a">
     <style>
+        :root { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; --accent: #38bdf8; --card: #1e293b; }
+        body { margin: 0; padding: 4px; /* Slashed body padding */ }
+        .container { max-width: 600px; margin: auto; }
+        .btn { background: var(--accent); color: #0f172a; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; }
         
-        * {
-            box-sizing: border-box;
-            max-width: 100%;
-        }
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; --danger: #ef4444; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
-        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #334155; margin-bottom: 20px; }
-        .team-card { background: var(--card); display: flex; align-items: center; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
-        .team-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-        .logo { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; background: #334155; object-fit: contain; }
-        .points { margin-left: auto; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
-        #selection-page { display: none; }
-        .stats-bar { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--accent); display: flex; justify-content: space-around; font-size: 0.85rem; z-index: 10; }
-        .stats-bar b { color: var(--accent); }
-        .player-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #334155; background: #1e293b50; }
-        .role-badge { font-size: 0.7rem; background: #334155; padding: 3px 8px; border-radius: 4px; margin-left: 10px; text-transform: uppercase; }
-        .btn { background: var(--accent); color: #0f172a; border: none; padding: 15px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; font-size: 1rem; }
-        .btn-secondary { background: #475569; margin-top: 10px; color: white; }
-        .btn-refresh { background:#10b981; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width: 100%; margin-bottom: 20px;}
-        .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; margin: 10px 0; font-family: monospace; }
-        /* COMPACT GRID LAYOUT FOR PLAYERS */
-       /* UPDATED: SINGLE COLUMN LAYOUT FOR FULL NAMES */
-        /* ========================================= */
-        /* ULTRA-COMPACT 25-PLAYER LAYOUT            */
-        /* ========================================= */
-        #player-pool {
-            display: flex;
-            flex-direction: column;
-            gap: 2px; /* Micro-gap to save vertical space */
-            padding: 5px 0;
-            width: 100%;
-        }
+        /* HOME PAGE COMPACTNESS */
+        .toggle-container { display: flex; background: #1e293b; border-radius: 6px; padding: 2px; margin-bottom: 8px; border: 1px solid #334155; }
+        .toggle-btn { flex: 1; padding: 6px; text-align: center; font-size: 0.75rem; font-weight: bold; color: #94a3b8; border-radius: 4px; }
+        .toggle-btn.active { background: var(--accent); color: #0f172a; }
         
-        .player-row { 
-            display: flex; 
-            align-items: center; 
-            padding: 4px 8px; /* Slashed padding for tight rows */
-            background: #1e293b; 
-            border: 1px solid #334155;
-            border-radius: 4px; /* Sharper corners save space */
-            font-size: 0.8rem; 
-            height: 32px; /* Fixed height forces it to fit screen */
-        }
-
-        .player-name {
-            margin-left: 8px;
-            font-weight: 600;
-            color: #f8fafc;
-            white-space: nowrap; /* Forces name to stay on ONE line (No two rows) */
-            overflow: hidden; 
-            text-overflow: ellipsis; /* Adds ... ONLY if the screen is unimaginably small */
-            flex: 1; /* Pushes the points to the far right */
-            font-size: 0.8rem; /* Shrunk to fit long names */
-        }
-
-        .role-badge {
-            font-size: 0.6rem; /* Micro badge */
-            padding: 2px 4px;
-            margin-left: 5px;
-        }
-
-        .pts-val {
-            margin-left: 8px;
-            font-weight: bold;
-            color: #ffb7b2; 
-            font-size: 0.85rem; /* Shrunk to match new layout */
-        }
-
-        .auto-box {
-            background: linear-gradient(145deg, #1e293b, #0f172a);
-            border: 1px solid var(--accent);
-            padding: 15px;
-            border-radius: 12px;
-            margin: 15px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .playing-today-dot {
-            height: 8px; 
-            width: 8px; 
-            background-color: #10b981; 
-            border-radius: 50%; 
-            box-shadow: 0 0 8px #10b981; 
-            display: inline-block; 
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        .toggle-container {
-            display: flex;
-            background: #1e293b;
-            border-radius: 8px;
-            padding: 4px;
-            margin-bottom: 20px;
-            border: 1px solid #334155;
-        }
-        .toggle-btn {
-            flex: 1;
-            padding: 10px;
-            text-align: center;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #94a3b8;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: 0.3s;
-        }
-        .toggle-btn.active {
-            background: var(--accent);
-            color: #0f172a;
-        }
+        /* 2-COLUMN TEAM GRID */
+        #team-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } 
+        .team-card { background: var(--card); border: 1px solid #334155; padding: 8px; border-radius: 6px; text-align: center; display: flex; flex-direction: column; justify-content: center;}
+        
+        /* TEAM PAGE COMPACTNESS */
+        #player-pool { display: flex; flex-direction: column; gap: 1px; width: 100%; }
+        
+        /* Ultra-tight rows (26px height) */
+        .player-row { display: flex; align-items: center; padding: 0 4px; background: #1e293b; border-radius: 4px; font-size: 0.75rem; height: 26px; border: 1px solid #334155; }
+        
+        /* Full names stay on one line */
+        .player-name { margin-left: 6px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; font-size: 0.75rem;}
+        
+        .role-badge { font-size: 0.55rem; padding: 2px 4px; margin-left: 4px; border-radius: 3px; }
+        .pts-val { margin-left: 6px; font-weight: bold; font-size: 0.8rem; color: #ffb7b2; }
+        .playing-today-dot { height: 6px; width: 6px; background-color: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+        
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
     </style>
 </head>
 <body>
-
-    <div id="home-page">
-        <div class="header">
-            <h1>IPL Leaderboard 2026</h1>
-            <p style="color: #94a3b8;">Select a team to manage squad</p>
+    <div class="container">
+        <div id="home-page">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin: 0; font-size: 1.2rem;">IPL FANTASY</h2>
+                <button onclick="triggerScraper(this)" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold;">🔄 REFRESH</button>
+            </header>
             
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <button class="btn-refresh" style="margin-bottom: 0;" onclick="triggerScraper(this)">
-                    🔄 REFRESH POINTS
-                </button>
-                
+            <div id="prediction-container"></div>
+            <div id="toggle-container"></div>
+            <div id="team-list"></div>
+        </div>
+
+        <div id="selection-page" style="display:none;">
+            <div class="stats-bar" style="display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--accent); margin-bottom: 4px;">
+                <span style="font-size: 0.75rem;">Sel: <b id="count">0</b>/11 | Frg: <b id="frgn">0</b>/4 | Ov: <b id="overs">0</b></span>
+                <button onclick="autoSelectSquad()" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">⚡ AUTO</button>
+            </div>
+            
+            <div id="player-pool"></div>
+            
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <button class="btn" style="flex: 1; margin: 0; padding: 8px; font-size: 0.8rem;" onclick="saveSelection(this)">SAVE SQUAD</button>
+                <button class="btn btn-secondary" style="flex: 1; margin: 0; padding: 8px; font-size: 0.8rem; background: #475569;" onclick="closeSelection()">CANCEL</button>
             </div>
         </div>
-        
-        <div id="team-list">
-            <div style="text-align: center; padding: 50px;">Connecting to Google Sheets...</div>
-        </div>
     </div>
-
-    <div id="selection-page">
-        <div class="stats-bar">
-            <span>Selected: <b id="count">0</b>/11</span>
-            <span>Foreign: <b id="frgn">0</b>/4</span>
-            <span>Overs: <b id="overs">0</b>/20</span>
-        </div>
-        
-        <div class="auto-box">
-            <div>
-                <b style="font-size: 1.1rem; color: var(--accent);">⚡ Auto Best Squad</b>
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">Picks highest scoring XI (Max 4 Foreigners)</div>
-            </div>
-            <button class="btn" style="margin: 0; width: auto; padding: 10px 20px; background: #10b981; color: white;" onclick="autoSelectSquad()">AUTO PICK</button>
-        </div>
-
-        <div id="player-pool"></div>
-        <button class="btn" onclick="saveSelection(this)">SAVE PLAYING XI</button>
-        <button class="btn btn-secondary" onclick="closeSelection()">CANCEL / BACK</button>
-    </div>
-
-    <div id="prediction-page" style="display: none;">
-        <div class="header">
-            <h1>Match Predictions</h1>
-            
-            <select id="user-selector" onchange="renderMatches()" style="background:#1e293b; color:white; border:1px solid var(--accent); padding:10px; border-radius:8px; width:100%; max-width:300px; font-size:1.1rem; margin-top:10px; text-align:center;">
-                <option value="Mohan">Playing as: Mohan</option>
-                <option value="Hemanth">Playing as: Hemanth</option>
-                <option value="Adhith">Playing as: Adhith</option>
-                <option value="Muthu">Playing as: Muthu</option>
-                <option value="Saran">Playing as: Saran</option>
-            </select>
-        </div>
-
-        <div id="dynamic-matches-container"></div>
-
-        <button class="btn btn-secondary" onclick="document.getElementById('prediction-page').style.display='none'; document.getElementById('home-page').style.display='block';">BACK TO HOME</button>
-    </div>
-
 <script>
     let currentLeaderboardView = 'overall'; // Can be 'overall' or 'weekly'
     function switchLeaderboard(view) {
@@ -237,97 +114,62 @@
     }
 
     function renderHome() {
-        let predictionHtml = "";
-        
-        // 1. YOUR EXISTING PREDICTION GRAPH
+        // 1. ULTRA-COMPACT PREDICTION CHART
         if (appData.leaderboard && appData.leaderboard.length > 0) {
             const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
-            predictionHtml = `
-                <div style="background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #334155;">
-                    <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8;">🏆 Prediction Standings</h3>
-                    <div id="chart-content">
-                        ${appData.leaderboard.map(f => {
-                            const width = (f.wins / maxWins) * 100;
-                            return `
-                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                    <div style="width: 75px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
-                                    <div style="flex: 1; background: #0f172a; height: 12px; border-radius: 6px; margin: 0 10px; overflow: hidden;">
-                                        <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 6px;"></div>
-                                    </div>
-                                    <div style="width: 25px; font-size: 0.85rem; font-weight: bold; color: var(--accent); text-align: right;">${f.wins}</div>
+            document.getElementById('prediction-container').innerHTML = `
+                <div style="background: var(--card); padding: 8px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #334155;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; text-align: center; font-weight: bold;">🏆 PREDICTIONS</div>
+                    ${appData.leaderboard.map(f => {
+                        const width = (f.wins / maxWins) * 100;
+                        return `
+                            <div style="display: flex; align-items: center; margin-bottom: 4px; height: 12px;">
+                                <div style="width: 50px; font-size: 0.7rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
+                                <div style="flex: 1; background: #0f172a; height: 8px; border-radius: 4px; margin: 0 5px;">
+                                    <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 4px;"></div>
                                 </div>
-                            `;
-                        }).join('')}
-                    </div>
+                                <div style="width: 20px; font-size: 0.75rem; font-weight: bold; color: var(--accent); text-align: right;">${f.wins}</div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
 
-        // 2. THE NEW TOGGLE UI
-        let toggleHtml = `
+        // 2. TOGGLE BUTTONS
+        document.getElementById('toggle-container').innerHTML = `
             <div class="toggle-container">
-                <div class="toggle-btn ${currentLeaderboardView === 'overall' ? 'active' : ''}" 
-                     onclick="switchLeaderboard('overall')">Overall Season</div>
-                <div class="toggle-btn ${currentLeaderboardView === 'weekly' ? 'active' : ''}" 
-                     onclick="switchLeaderboard('weekly')">This Week</div>
+                <div class="toggle-btn ${currentLeaderboardView === 'overall' ? 'active' : ''}" onclick="switchLeaderboard('overall')">Overall Season</div>
+                <div class="toggle-btn ${currentLeaderboardView === 'weekly' ? 'active' : ''}" onclick="switchLeaderboard('weekly')">This Week</div>
             </div>
         `;
 
-        // 3. SMART SORTING (Weekly vs Overall)
+        // 3. 2-COLUMN TEAM GRID
         const sortedTeams = [...appData.teams].sort((a, b) => {
             if (currentLeaderboardView === 'weekly') {
-                const scoreA = parseFloat(a.Week_Score || a.Weekscore || a.WeekScore || 0);
-                const scoreB = parseFloat(b.Week_Score || b.Weekscore || b.WeekScore || 0);
-                return scoreB - scoreA;
+                return parseFloat(b.Week_Score || b.Weekscore || 0) - parseFloat(a.Week_Score || a.Weekscore || 0);
             } else {
-                const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score || 0);
-                const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score || 0);
-                return scoreB - scoreA; 
+                return parseFloat(b.Total_Score || b.Totalscore || b.Score || 0) - parseFloat(a.Total_Score || a.Totalscore || a.Score || 0); 
             }
         });
 
-        // 4. DRAWING THE TEAM CARDS
-        const teamsHtml = sortedTeams.map((t, index) => {
+        document.getElementById('team-list').innerHTML = sortedTeams.map((t, index) => {
             const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
-            
-            // Pick the right score to show
-            const score = currentLeaderboardView === 'weekly' 
-                ? (parseFloat(t.Week_Score || t.Weekscore || t.WeekScore) || 0) 
-                : (parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0);
-                
-            const logo = t.Logo_URL || t.Logourl || "";
+            const score = currentLeaderboardView === 'weekly' ? (parseFloat(t.Week_Score || t.Weekscore) || 0) : (parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0);
             
             let cardStyle = "";
-            let badge = "";
-            
             if (index === 0) {
-                if (currentLeaderboardView === 'weekly') {
-                    // Manager of the Week Styling
-                    cardStyle = "border: 2px solid #10b981; background: linear-gradient(145deg, #1e293b, #022c22);";
-                    badge = `<div style="font-size: 0.7rem; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; margin-bottom: 4px; display: inline-block;">⭐ MANAGER OF THE WEEK</div><br>`;
-                } else {
-                    // Overall Leader Styling
-                    cardStyle = "border: 2px solid #fbbf24; background: linear-gradient(145deg, #1e293b, #382504);";
-                    badge = `<span style="font-size: 1.5rem; margin-right: 10px; filter: drop-shadow(0 0 5px gold);">👑</span>`;
-                }
+                cardStyle = currentLeaderboardView === 'weekly' 
+                    ? "border: 1px solid #10b981; background: #022c22;" 
+                    : "border: 1px solid #fbbf24; background: #382504;";
             }
 
             return `
                 <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
-                    <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                    <div style="flex: 1;">
-                        ${badge}
-                        <b style="font-size: 1.1rem;">${name}</b>
-                    </div>
-                    <div class="points" style="${index === 0 && currentLeaderboardView === 'overall' ? 'color: #fbbf24;' : ''}
-                                               ${index === 0 && currentLeaderboardView === 'weekly' ? 'color: #10b981;' : ''}">
-                        ${Math.round(score)} pts
-                    </div>
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 2px; color: #f8fafc;">${index === 0 ? '👑 ' : ''}${name}</div>
+                    <div style="font-size: 0.9rem; font-weight: bold; ${index === 0 ? (currentLeaderboardView === 'weekly' ? 'color:#10b981;' : 'color:#fbbf24;') : 'color: var(--accent);'}">${Math.round(score)} pts</div>
                 </div>`;
         }).join('');
-
-        // Combine Prediction Graph + Toggle + Teams
-        document.getElementById('team-list').innerHTML = predictionHtml + toggleHtml + teamsHtml;
     }
     function openSelection(teamName) {
         currentTeam = teamName.trim();
