@@ -89,6 +89,24 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        .playing-today-dot {
+            height: 8px; 
+            width: 8px; 
+            background-color: #10b981; 
+            border-radius: 50%; 
+            box-shadow: 0 0 8px #10b981; 
+            display: inline-block; 
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        
     </style>
 </head>
 <body>
@@ -406,6 +424,43 @@
             // If both are selected or both are unselected, sort by points
             const ptsA = parseFloat(Object.values(a)[1]) || 0;
             const ptsB = parseFloat(Object.values(b)[1]) || 0;
+
+            document.getElementById('player-pool').innerHTML = sortedPlayers.map(p => {
+            const vals = Object.values(p);
+            const fullName = vals[0] || "Unknown";
+            const pts = parseFloat(vals[1]).toFixed(1) || "0.0"; 
+            const team = (vals[2] || "").toString().trim().toUpperCase(); // Grab their Team
+            const role = vals[3] || "BT";
+            const isFrgn = role.toLowerCase().includes('f');
+            const isChecked = selectedNames.includes(fullName);
+            
+            // --- NEW: CHECK IF PLAYING TODAY ---
+            // For testing, we will pretend today is "09/04/2026" (Match 1 in your schedule)
+            const todayDateString = "09/04/2026"; 
+            const isPlayingToday = matchSchedule.some(m => 
+                m.date.includes(todayDateString) && (m.home === team || m.away === team)
+            );
+            
+            const dotHtml = isPlayingToday ? `<span class="playing-today-dot" title="Playing Today!"></span>` : ``;
+            // ------------------------------------
+
+            const rowStyle = isChecked ? "background: rgba(56, 189, 248, 0.15); border-color: var(--accent);" : "";
+            const badgeStyle = isFrgn ? "background: #ef4444; color: white;" : "background: #334155; color: #94a3b8;";
+
+            return `
+                <div class="player-row" style="${rowStyle}">
+                    <input type="checkbox" style="transform: scale(1.1); flex-shrink: 0; margin: 0;" 
+                        ${isChecked ? 'checked' : ''} 
+                        onchange="togglePlayer('${fullName}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
+                    
+                    <span class="player-name" title="${fullName}">${dotHtml}${fullName}</span>
+                    
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
+                        <span class="role-badge" style="${badgeStyle}">${role}</span>
+                        <span class="pts-val">${pts}</span>
+                    </div>
+                </div>`;
+        }).join('');
             return ptsB - ptsA; 
         });
 
