@@ -302,21 +302,31 @@
             let rawPts = parseFloat(vals[1]);
             const pts = isNaN(rawPts) ? "0.0" : rawPts.toFixed(1); 
             
-            const team = (vals[2] || "").toString().trim().toUpperCase(); 
+            // Replace "IPL_Team" with whatever your actual column header is in Google Sheets!
+            const actualIplTeam = (p.IPL_Team || p.Franchise || p.RealTeam || vals[2]).toString().trim().toUpperCase();
             const role = vals[3] || "BT";
             const isFrgn = role.toLowerCase().includes('f');
             const isChecked = selectedNames.includes(fullName);
             
-            let isPlayingToday = false;
+            // --- CRASH-PROOF "PLAYING TODAY" CHECK ---
+            isPlayingToday = matchSchedule.some(m => 
+            m.date && m.date.includes(todayDateString) && (m.home === actualIplTeam || m.away === actualIplTeam)
+        );
             try {
-                // Change this to today's date to test the green dot!
-                const todayDateString = "09/04/2026"; 
+                // Gets today's real date in DD/MM/YYYY format
+                const todayObj = new Date();
+                const dd = String(todayObj.getDate()).padStart(2, '0');
+                const mm = String(todayObj.getMonth() + 1).padStart(2, '0'); // January is 0!
+                const yyyy = todayObj.getFullYear();
+                const todayDateString = `${dd}/${mm}/${yyyy}`; 
+
                 isPlayingToday = matchSchedule.some(m => 
                     m.date && m.date.includes(todayDateString) && (m.home === team || m.away === team)
                 );
             } catch (error) {
                 console.warn("Playing Today check skipped.");
             }
+            // ------------------------------------------
             
             const dotHtml = isPlayingToday ? `<span class="playing-today-dot" title="Playing Today!"></span>` : ``;
 
