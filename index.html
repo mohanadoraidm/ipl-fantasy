@@ -276,12 +276,12 @@
     }
 
    function renderHome() {
-    console.log("Leaderboard Data:", appData.leaderboard); // Check your browser console!
-
     let predictionHtml = "";
     
-    // Check if leaderboard exists and has data
+    // Check if the data successfully arrived from your friend's sheet
     if (appData.leaderboard && appData.leaderboard.length > 0) {
+        
+        // Find the highest score (e.g., Hemanth's 7) so the bars scale perfectly
         const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
         
         predictionHtml = `
@@ -289,6 +289,7 @@
                 <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8;">🏆 Prediction Standings</h3>
                 <div id="chart-content">
                     ${appData.leaderboard.map(f => {
+                        // Calculate how wide the bar should be (0% to 100%)
                         const width = (f.wins / maxWins) * 100;
                         return `
                             <div style="display: flex; align-items: center; margin-bottom: 8px;">
@@ -303,11 +304,9 @@
                 </div>
             </div>
         `;
-    } else {
-        // If the graph is missing, this message will help us troubleshoot
-        predictionHtml = `<div style="text-align:center; color:#475569; margin-bottom:20px;">(Prediction data loading...)</div>`;
     }
 
+    // Sort and Render your Fantasy Teams
     const sortedTeams = [...appData.teams].sort((a, b) => {
         const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
         const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
@@ -328,9 +327,9 @@
             </div>`;
     }).join('');
 
+    // Inject both the Prediction Graph and Fantasy Teams into the screen
     document.getElementById('team-list').innerHTML = predictionHtml + teamsHtml;
 }
-
     function openSelection(teamName) {
         currentTeam = teamName.trim();
         const cleanTarget = currentTeam.toLowerCase().replace(/\s/g, '');
