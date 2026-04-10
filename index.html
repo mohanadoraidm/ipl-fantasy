@@ -168,7 +168,7 @@
     </div>
 
 <script>
-    let currentTeamPlayers = []; // NEW: Stores the current team's roster for the auto-picker
+    // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js')
@@ -176,26 +176,22 @@
                 .catch(err => console.log('PWA Setup Failed: ', err));
         });
     }
+
+    // 🔴 PASTE YOUR EXACT GOOGLE SCRIPT URL HERE:
     const API_URL = "https://script.google.com/macros/s/AKfycbzAjPcHzGiK0AZIh4CRBYps4OkcLOS6GnPnrhTE-UQhacnpi7Gy3zML67kJNaj0ASnGew/exec"; 
     
-    let appData = { teams: [], players: [] };
+    let appData = { teams: [], players: [], leaderboard: [] };
     let currentTeam = "";
     let selectedNames = [];
+    let currentTeamPlayers = [];
 
-    // --- MOCK PREDICTION DATA (To be replaced by your backend later) ---
+    // The schedule to check for the "Playing Today" green dot
     const matchSchedule = [
-        { id: "M1", date: "09/04/2026 - 19:30 IST", home: "KKR", away: "LSG" },
-        { id: "M2", date: "10/04/2026 - 19:30 IST", home: "RR", away: "RCB" },
-        { id: "M3", date: "11/04/2026 - 15:30 IST", home: "PBKS", away: "SRH" },
-        { id: "M4", date: "11/04/2026 - 19:30 IST", home: "CSK", away: "DC" }
+        { date: "09/04/2026", home: "KKR", away: "LSG" },
+        { date: "10/04/2026", home: "RR", away: "RCB" },
+        { date: "11/04/2026", home: "PBKS", away: "SRH" },
+        { date: "11/04/2026", home: "CSK", away: "DC" }
     ];
-
-    const pastPredictions = {
-        "Mohan":  { "M1": "LSG", "M2": "RCB" },
-        "Hemanth": { "M1": "KKR" },
-        "Adhith": { "M2": "RR", "M3": "PBKS" }
-    };
-    // ------------------------------------------------------------------
 
     async function init() {
         try {
@@ -211,182 +207,56 @@
             document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Connection Failed:</b> Make sure you copied the correct Web App URL and deployed as "Anyone".</div>`;
         }
     }
-    
-    function closeSelection() {
-        document.getElementById('selection-page').style.display = 'none';
-        document.getElementById('home-page').style.display = 'block';
-        window.scrollTo(0, 0);
-    }
 
-    function openPredictions() {
-        document.getElementById('home-page').style.display = 'none';
-        document.getElementById('prediction-page').style.display = 'block';
-        window.scrollTo(0,0);
-        renderMatches();
-    }
-
-    function renderMatches() {
-        const currentUser = document.getElementById('user-selector').value;
-        const container = document.getElementById('dynamic-matches-container');
+    function renderHome() {
+        let predictionHtml = "";
         
-        const userPicks = pastPredictions[currentUser] || {};
-
-        container.innerHTML = matchSchedule.map(match => {
-            const pickedTeam = userPicks[match.id]; 
-            
-            // Standard colors based on your screenshot aesthetic
-            let homeStyle = "background: #d4af37; color: #000;"; 
-            let awayStyle = "background: #dc2626; color: #fff;"; 
-            let homeText = `WIN ${match.home}`;
-            let awayText = `WIN ${match.away}`;
-            let homeDisabled = "";
-            let awayDisabled = "";
-
-            // LOGIC: Check if user already predicted this
-            if (pickedTeam === match.home) {
-                homeText = "✅ PREDICTED";
-                homeStyle = "background: #10b981; color: white; outline: 2px solid #10b981;"; // Green
-                awayStyle = "background: #334155; color: #64748b; opacity: 0.5;"; // Grayed out
-                awayDisabled = "disabled";
-                homeDisabled = "disabled"; 
-            } else if (pickedTeam === match.away) {
-                awayText = "✅ PREDICTED";
-                awayStyle = "background: #10b981; color: white; outline: 2px solid #10b981;"; 
-                homeStyle = "background: #334155; color: #64748b; opacity: 0.5;";
-                homeDisabled = "disabled";
-                awayDisabled = "disabled";
-            }
-
-            return `
-                <div class="team-card" style="flex-direction: column; text-align: center; margin-bottom: 15px;">
-                    <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 10px;">${match.date}</div>
-                    <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 15px;">${match.home} vs ${match.away}</div>
-                    
-                    <div style="display: flex; gap: 10px; width: 100%;">
-                        <button class="btn" style="margin-top:0; flex:1; ${homeStyle}" ${homeDisabled} 
-                            onclick="submitPrediction('${match.home}', '${match.away}', '${match.home}', this)">
-                            ${homeText}
-                        </button>
-                        <button class="btn" style="margin-top:0; flex:1; ${awayStyle}" ${awayDisabled} 
-                            onclick="submitPrediction('${match.home}', '${match.away}', '${match.away}', this)">
-                            ${awayText}
-                        </button>
+        if (appData.leaderboard && appData.leaderboard.length > 0) {
+            const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
+            predictionHtml = `
+                <div style="background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #334155;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8;">🏆 Prediction Standings</h3>
+                    <div id="chart-content">
+                        ${appData.leaderboard.map(f => {
+                            const width = (f.wins / maxWins) * 100;
+                            return `
+                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                    <div style="width: 75px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
+                                    <div style="flex: 1; background: #0f172a; height: 12px; border-radius: 6px; margin: 0 10px; overflow: hidden;">
+                                        <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 6px;"></div>
+                                    </div>
+                                    <div style="width: 25px; font-size: 0.85rem; font-weight: bold; color: var(--accent); text-align: right;">${f.wins}</div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
-        }).join('');
-    }
-
-    async function submitPrediction(home, away, pick, btnElement) {
-        const user = document.getElementById('user-selector').value;
-        const originalText = btnElement.innerText;
-        const originalBg = btnElement.style.background;
-        
-        btnElement.innerText = "SAVING...";
-        btnElement.style.background = "#94a3b8";
-        btnElement.disabled = true;
-
-        const payload = {
-            action: "savePrediction",
-            user: user,
-            homeTeam: home,
-            awayTeam: away,
-            prediction: pick
-        };
-
-        try {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-            
-            // Get the raw text from Google first before trying to parse it
-            const rawResponse = await res.text(); 
-            
-            try {
-                const result = JSON.parse(rawResponse);
-                if (result.success) {
-                    alert("Prediction Locked In!");
-                    btnElement.innerText = "✅ SAVED";
-                    btnElement.style.background = "#10b981"; 
-                } else {
-                    alert(result.error); 
-                    btnElement.innerText = originalText;
-                    btnElement.style.background = originalBg;
-                    btnElement.disabled = false;
-                }
-            } catch (parseError) {
-                // If Google sends an HTML error page or raw text, show it!
-                alert("Backend Error: " + rawResponse);
-                btnElement.innerText = originalText;
-                btnElement.style.background = originalBg;
-                btnElement.disabled = false;
-            }
-
-        } catch (err) {
-            alert("Network Error: Could not reach database.");
-            btnElement.innerText = originalText;
-            btnElement.style.background = originalBg;
-            btnElement.disabled = false;
         }
-        
+
+        const sortedTeams = [...appData.teams].sort((a, b) => {
+            const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
+            const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
+            return scoreB - scoreA; 
+        });
+
+        const teamsHtml = sortedTeams.map((t, index) => {
+            const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
+            const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
+            const logo = t.Logo_URL || t.Logourl || "";
+            let cardStyle = index === 0 ? "border: 2px solid #fbbf24; background: linear-gradient(145deg, #1e293b, #382504);" : "";
+
+            return `
+                <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
+                    <img src="${logo}" class="logo" onerror="this.style.display='none'">
+                    <div style="font-size: 1.1rem;"><b>${name}</b></div>
+                    <div class="points">${Math.round(score)} pts</div>
+                </div>`;
+        }).join('');
+
+        document.getElementById('team-list').innerHTML = predictionHtml + teamsHtml;
     }
 
-   function renderHome() {
-    let predictionHtml = "";
-    
-    // Check if the data successfully arrived from your friend's sheet
-    if (appData.leaderboard && appData.leaderboard.length > 0) {
-        
-        // Find the highest score (e.g., Hemanth's 7) so the bars scale perfectly
-        const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
-        
-        predictionHtml = `
-            <div style="background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #334155;">
-                <h3 style="margin: 0 0 15px 0; font-size: 1rem; color: #94a3b8;">🏆 Prediction Standings</h3>
-                <div id="chart-content">
-                    ${appData.leaderboard.map(f => {
-                        // Calculate how wide the bar should be (0% to 100%)
-                        const width = (f.wins / maxWins) * 100;
-                        return `
-                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <div style="width: 75px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</div>
-                                <div style="flex: 1; background: #0f172a; height: 12px; border-radius: 6px; margin: 0 10px; overflow: hidden;">
-                                    <div style="width: ${width}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); border-radius: 6px;"></div>
-                                </div>
-                                <div style="width: 25px; font-size: 0.85rem; font-weight: bold; color: var(--accent); text-align: right;">${f.wins}</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    // Sort and Render your Fantasy Teams
-    const sortedTeams = [...appData.teams].sort((a, b) => {
-        const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
-        const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
-        return scoreB - scoreA; 
-    });
-
-    const teamsHtml = sortedTeams.map((t, index) => {
-        const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
-        const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
-        const logo = t.Logo_URL || t.Logourl || "";
-        let cardStyle = index === 0 ? "border: 2px solid #fbbf24; background: linear-gradient(145deg, #1e293b, #382504);" : "";
-
-        return `
-            <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
-                <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                <div style="font-size: 1.1rem;"><b>${name}</b></div>
-                <div class="points">${Math.round(score)} pts</div>
-            </div>`;
-    }).join('');
-
-    // Inject both the Prediction Graph and Fantasy Teams into the screen
-    document.getElementById('team-list').innerHTML = predictionHtml + teamsHtml;
-}
     function openSelection(teamName) {
         currentTeam = teamName.trim();
         const cleanTarget = currentTeam.toLowerCase().replace(/\s/g, '');
@@ -399,7 +269,7 @@
             return pTeam === cleanTarget;
         });
 
-        currentTeamPlayers = teamPlayers; // <--- ADD THIS LINE HERE
+        currentTeamPlayers = teamPlayers;
 
         selectedNames = teamPlayers.filter(p => {
             const s = p.Playing || p.Playing_XI || p.Status || "";
@@ -411,7 +281,6 @@
     }
 
     function renderPlayers(players) {
-        // Sort: Checked players at the top, then by points
         const sortedPlayers = [...players].sort((a, b) => {
             const nameA = Object.values(a)[0];
             const nameB = Object.values(b)[0];
@@ -430,7 +299,6 @@
             const vals = Object.values(p);
             const fullName = vals[0] || "Unknown";
             
-            // Safe Number Parsing (Prevents crashes if points are empty)
             let rawPts = parseFloat(vals[1]);
             const pts = isNaN(rawPts) ? "0.0" : rawPts.toFixed(1); 
             
@@ -439,24 +307,18 @@
             const isFrgn = role.toLowerCase().includes('f');
             const isChecked = selectedNames.includes(fullName);
             
-            // --- CRASH-PROOF "PLAYING TODAY" CHECK ---
             let isPlayingToday = false;
             try {
-                // We define a fallback schedule right here in case the global one was deleted
-                const activeSchedule = typeof matchSchedule !== 'undefined' ? matchSchedule : [
-                    { date: "09/04/2026", home: "KKR", away: "LSG" } // Fallback mock data
-                ];
-                
-                const todayDateString = "09/04/2026"; // Change to today's date when live
-                isPlayingToday = activeSchedule.some(m => 
+                // Change this to today's date to test the green dot!
+                const todayDateString = "09/04/2026"; 
+                isPlayingToday = matchSchedule.some(m => 
                     m.date && m.date.includes(todayDateString) && (m.home === team || m.away === team)
                 );
             } catch (error) {
-                console.warn("Playing Today check skipped due to error.");
+                console.warn("Playing Today check skipped.");
             }
             
             const dotHtml = isPlayingToday ? `<span class="playing-today-dot" title="Playing Today!"></span>` : ``;
-            // ------------------------------------------
 
             const rowStyle = isChecked ? "background: rgba(56, 189, 248, 0.15); border-color: var(--accent);" : "";
             const badgeStyle = isFrgn ? "background: #ef4444; color: white;" : "background: #334155; color: #94a3b8;";
@@ -477,78 +339,6 @@
         }).join('');
     }
 
-        document.getElementById('player-pool').innerHTML = sortedPlayers.map(p => {
-            const vals = Object.values(p);
-            const fullName = vals[0] || "Unknown";
-            const pts = parseFloat(vals[1]).toFixed(1) || "0.0"; // Ensures decimals like 175.3
-            const role = vals[3] || "BT";
-            const isFrgn = role.toLowerCase().includes('f');
-            
-            const isChecked = selectedNames.includes(fullName);
-            
-            // Removed the shortName logic - we now use fullName directly
-            const rowStyle = isChecked 
-                ? "background: rgba(56, 189, 248, 0.15); border-color: var(--accent);" 
-                : "";
-                
-            // Highlight foreigner badges slightly to distinguish them
-            const badgeStyle = isFrgn ? "background: #ef4444; color: white;" : "background: #334155; color: #94a3b8;";
-
-            return `
-                <div class="player-row" style="${rowStyle}">
-                    <input type="checkbox" style="transform: scale(1.1); flex-shrink: 0;" 
-                        ${isChecked ? 'checked' : ''} 
-                        onchange="togglePlayer('${fullName}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
-                    
-                    <span class="player-name" title="${fullName}">${fullName}</span>
-                    
-                    <div style="margin-left: auto; display: flex; align-items: center; gap: 15px;">
-                        <span class="role-badge" style="${badgeStyle}">${role}</span>
-                        <span class="pts-val">${pts}</span>
-                    </div>
-                </div>`;
-        }).join('');
-    }
-
-    // NEW: The Auto-Pick Algorithm
-    function autoSelectSquad() {
-        selectedNames = []; // Clear current selections
-        let frgnCount = 0;
-        
-        // Sort all players by points, highest to lowest
-        const sortedByPoints = [...currentTeamPlayers].sort((a, b) => {
-            const ptsA = parseFloat(Object.values(a)[1]) || 0;
-            const ptsB = parseFloat(Object.values(b)[1]) || 0;
-            return ptsB - ptsA;
-        });
-
-        // Greedy algorithm: Pick the highest scorers while respecting the foreigner limit
-        for (let i = 0; i < sortedByPoints.length; i++) {
-            if (selectedNames.length >= 11) break; // Stop at 11
-
-            const p = sortedByPoints[i];
-            const name = Object.values(p)[0];
-            const role = (Object.values(p)[3] || "").toString().toLowerCase();
-            const isFrgn = role.includes('f');
-
-            if (isFrgn && frgnCount >= 4) {
-                continue; // Skip this player if we already have 4 foreigners
-            }
-
-            selectedNames.push(name);
-            if (isFrgn) frgnCount++;
-        }
-
-        renderPlayers(currentTeamPlayers);
-        updateStats(currentTeamPlayers);
-        
-        // Let the user know if they still need to fix overs
-        const currentOvers = parseInt(document.getElementById('overs').innerText);
-        if (currentOvers < 20) {
-            alert("Auto-picked the highest scorers! Note: You only have " + currentOvers + " overs. Please adjust manually to reach 20.");
-        }
-    }
-
     function togglePlayer(name, players) {
         if (selectedNames.includes(name)) {
             selectedNames = selectedNames.filter(n => n !== name);
@@ -557,6 +347,39 @@
             selectedNames.push(name);
         }
         updateStats(players);
+    }
+
+    function autoSelectSquad() {
+        selectedNames = []; 
+        let frgnCount = 0;
+        
+        const sortedByPoints = [...currentTeamPlayers].sort((a, b) => {
+            const ptsA = parseFloat(Object.values(a)[1]) || 0;
+            const ptsB = parseFloat(Object.values(b)[1]) || 0;
+            return ptsB - ptsA;
+        });
+
+        for (let i = 0; i < sortedByPoints.length; i++) {
+            if (selectedNames.length >= 11) break; 
+
+            const p = sortedByPoints[i];
+            const name = Object.values(p)[0];
+            const role = (Object.values(p)[3] || "").toString().toLowerCase();
+            const isFrgn = role.includes('f');
+
+            if (isFrgn && frgnCount >= 4) continue; 
+
+            selectedNames.push(name);
+            if (isFrgn) frgnCount++;
+        }
+
+        renderPlayers(currentTeamPlayers);
+        updateStats(currentTeamPlayers);
+        
+        const currentOvers = parseInt(document.getElementById('overs').innerText);
+        if (currentOvers < 20) {
+            alert("Auto-picked! Note: You only have " + currentOvers + " overs. Please adjust manually.");
+        }
     }
 
     function updateStats(players) {
@@ -589,19 +412,16 @@
         btn.style.background = "#94a3b8";
 
         try {
-            // 1. Send the save command to Google Sheets in the background
             await fetch(API_URL, { 
                 method: 'POST', 
                 body: JSON.stringify({ teamName: currentTeam, selectedPlayers: selectedNames }) 
             });
             
-            // 2. Update the local memory INSTANTLY so we don't have to re-download the database!
             const cleanTarget = currentTeam.toLowerCase().replace(/\s/g, '');
             appData.players.forEach(p => {
                 const pTeam = (p.Team || p.Team_Name || p.Teamname || "").toString().toLowerCase().replace(/\s/g, '');
                 if (pTeam === cleanTarget) {
                     const pName = Object.values(p)[0];
-                    // If the player is in our selected list, mark them as playing in the local memory
                     const isPlaying = selectedNames.includes(pName);
                     p.Playing = isPlaying;
                     p.Playing_XI = isPlaying;
@@ -609,11 +429,9 @@
                 }
             });
 
-            // 3. Zip right back to the home screen
             alert("Saved Successfully!"); 
             closeSelection(); 
             
-            // Reset button for next time
             btn.innerText = "SAVE PLAYING XI"; 
             btn.disabled = false; 
             btn.style.background = "var(--accent)";
@@ -625,6 +443,13 @@
             btn.style.background = "var(--accent)";
         }
     }
+
+    function closeSelection() {
+        document.getElementById('selection-page').style.display = 'none';
+        document.getElementById('home-page').style.display = 'block';
+        window.scrollTo(0, 0);
+    }
+
     async function triggerScraper(btn) {
         btn.innerText = "⏳ STARTING..."; btn.disabled = true; btn.style.background = "#94a3b8";
         try {
