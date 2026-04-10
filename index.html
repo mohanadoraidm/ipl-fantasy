@@ -106,7 +106,30 @@
             70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
-        
+
+        .toggle-container {
+            display: flex;
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #94a3b8;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+        .toggle-btn.active {
+            background: var(--accent);
+            color: #0f172a;
+        }
     </style>
 </head>
 <body>
@@ -168,6 +191,11 @@
     </div>
 
 <script>
+    let currentLeaderboardView = 'overall'; // Can be 'overall' or 'weekly'
+    function switchLeaderboard(view) {
+        currentLeaderboardView = view;
+        renderHome(); // Instantly redraws the screen when clicked
+    }
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -211,6 +239,7 @@
     function renderHome() {
         let predictionHtml = "";
         
+        // 1. YOUR EXISTING PREDICTION GRAPH
         if (appData.leaderboard && appData.leaderboard.length > 0) {
             const maxWins = Math.max(...appData.leaderboard.map(x => x.wins)) || 1;
             predictionHtml = `
@@ -234,29 +263,72 @@
             `;
         }
 
+        // 2. THE NEW TOGGLE UI
+        let toggleHtml = `
+            <div class="toggle-container">
+                <div class="toggle-btn ${currentLeaderboardView === 'overall' ? 'active' : ''}" 
+                     onclick="switchLeaderboard('overall')">Overall Season</div>
+                <div class="toggle-btn ${currentLeaderboardView === 'weekly' ? 'active' : ''}" 
+                     onclick="switchLeaderboard('weekly')">This Week</div>
+            </div>
+        `;
+
+        // 3. SMART SORTING (Weekly vs Overall)
         const sortedTeams = [...appData.teams].sort((a, b) => {
-            const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score) || 0;
-            const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score) || 0;
-            return scoreB - scoreA; 
+            if (currentLeaderboardView === 'weekly') {
+                const scoreA = parseFloat(a.Week_Score || a.Weekscore || a.WeekScore || 0);
+                const scoreB = parseFloat(b.Week_Score || b.Weekscore || b.WeekScore || 0);
+                return scoreB - scoreA;
+            } else {
+                const scoreA = parseFloat(a.Total_Score || a.Totalscore || a.Score || 0);
+                const scoreB = parseFloat(b.Total_Score || b.Totalscore || b.Score || 0);
+                return scoreB - scoreA; 
+            }
         });
 
+        // 4. DRAWING THE TEAM CARDS
         const teamsHtml = sortedTeams.map((t, index) => {
             const name = t.Team_Name || t.Teamname || t.Team || "Unknown";
-            const score = parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0;
+            
+            // Pick the right score to show
+            const score = currentLeaderboardView === 'weekly' 
+                ? (parseFloat(t.Week_Score || t.Weekscore || t.WeekScore) || 0) 
+                : (parseFloat(t.Total_Score || t.Totalscore || t.Score) || 0);
+                
             const logo = t.Logo_URL || t.Logourl || "";
-            let cardStyle = index === 0 ? "border: 2px solid #fbbf24; background: linear-gradient(145deg, #1e293b, #382504);" : "";
+            
+            let cardStyle = "";
+            let badge = "";
+            
+            if (index === 0) {
+                if (currentLeaderboardView === 'weekly') {
+                    // Manager of the Week Styling
+                    cardStyle = "border: 2px solid #10b981; background: linear-gradient(145deg, #1e293b, #022c22);";
+                    badge = `<div style="font-size: 0.7rem; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; margin-bottom: 4px; display: inline-block;">⭐ MANAGER OF THE WEEK</div><br>`;
+                } else {
+                    // Overall Leader Styling
+                    cardStyle = "border: 2px solid #fbbf24; background: linear-gradient(145deg, #1e293b, #382504);";
+                    badge = `<span style="font-size: 1.5rem; margin-right: 10px; filter: drop-shadow(0 0 5px gold);">👑</span>`;
+                }
+            }
 
             return `
                 <div class="team-card" style="${cardStyle}" onclick="openSelection('${name}')">
                     <img src="${logo}" class="logo" onerror="this.style.display='none'">
-                    <div style="font-size: 1.1rem;"><b>${name}</b></div>
-                    <div class="points">${Math.round(score)} pts</div>
+                    <div style="flex: 1;">
+                        ${badge}
+                        <b style="font-size: 1.1rem;">${name}</b>
+                    </div>
+                    <div class="points" style="${index === 0 && currentLeaderboardView === 'overall' ? 'color: #fbbf24;' : ''}
+                                               ${index === 0 && currentLeaderboardView === 'weekly' ? 'color: #10b981;' : ''}">
+                        ${Math.round(score)} pts
+                    </div>
                 </div>`;
         }).join('');
 
-        document.getElementById('team-list').innerHTML = predictionHtml + teamsHtml;
+        // Combine Prediction Graph + Toggle + Teams
+        document.getElementById('team-list').innerHTML = predictionHtml + toggleHtml + teamsHtml;
     }
-
     function openSelection(teamName) {
         currentTeam = teamName.trim();
         const cleanTarget = currentTeam.toLowerCase().replace(/\s/g, '');
