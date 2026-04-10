@@ -33,36 +33,50 @@
         .error-box { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; margin: 10px 0; font-family: monospace; }
         /* COMPACT GRID LAYOUT FOR PLAYERS */
        /* UPDATED: SINGLE COLUMN LAYOUT FOR FULL NAMES */
+        /* ========================================= */
+        /* ULTRA-COMPACT 25-PLAYER LAYOUT            */
+        /* ========================================= */
         #player-pool {
             display: flex;
             flex-direction: column;
-            gap: 10px; 
-            padding: 10px 0;
+            gap: 2px; /* Micro-gap to save vertical space */
+            padding: 5px 0;
             width: 100%;
         }
         
         .player-row { 
             display: flex; 
             align-items: center; 
-            padding: 15px 12px; /* Taller, more readable rows */
-            background: #1e293b; /* Darker contrast */
+            padding: 4px 8px; /* Slashed padding for tight rows */
+            background: #1e293b; 
             border: 1px solid #334155;
-            border-radius: 8px;
-            font-size: 1rem; 
+            border-radius: 4px; /* Sharper corners save space */
+            font-size: 0.8rem; 
+            height: 32px; /* Fixed height forces it to fit screen */
         }
 
         .player-name {
-            margin-left: 15px;
+            margin-left: 8px;
             font-weight: 600;
-            /* Removed truncation so full names show */
             color: #f8fafc;
+            white-space: nowrap; /* Forces name to stay on ONE line (No two rows) */
+            overflow: hidden; 
+            text-overflow: ellipsis; /* Adds ... ONLY if the screen is unimaginably small */
+            flex: 1; /* Pushes the points to the far right */
+            font-size: 0.8rem; /* Shrunk to fit long names */
+        }
+
+        .role-badge {
+            font-size: 0.6rem; /* Micro badge */
+            padding: 2px 4px;
+            margin-left: 5px;
         }
 
         .pts-val {
-            margin-left: auto;
+            margin-left: 8px;
             font-weight: bold;
-            color: #ffb7b2; /* A nice salmon/orange color matching your image */
-            font-size: 1.1rem;
+            color: #ffb7b2; 
+            font-size: 0.85rem; /* Shrunk to match new layout */
         }
 
         .auto-box {
@@ -408,7 +422,7 @@
 
             return `
                 <div class="player-row" style="${rowStyle}">
-                    <input type="checkbox" style="transform: scale(1.4); flex-shrink: 0;" 
+                    <input type="checkbox" style="transform: scale(1.1); flex-shrink: 0;" 
                         ${isChecked ? 'checked' : ''} 
                         onchange="togglePlayer('${fullName}', ${JSON.stringify(players).replace(/"/g, '&quot;')})">
                     
