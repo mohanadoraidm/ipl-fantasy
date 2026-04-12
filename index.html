@@ -326,9 +326,8 @@
         }
     }
 
-    function updateStats(players) {
+   function updateStats(players) {
         let overs = 0, frgn = 0, todayCount = 0;
-        const selectedObj = players.filter(p => selectedNames.includes(Object.values(p)[0]));
         
         // Grab the live schedule and today's date
         const liveSchedule = appData.schedule || []; 
@@ -338,21 +337,22 @@
         const yyyy = todayObj.getFullYear();
         const todayDateString = `${dd}/${mm}/${yyyy}`;
 
-        selectedObj.forEach(p => {
-            const vals = Object.values(p);
-            const role = (vals[3] || "").toString().toLowerCase();
-            const actualIplTeam = String(p.IPL_Team || p.Franchise || p.IPL || p.Team || vals[4] || "").trim().toUpperCase();
-            
-            // 1. Calculate Stats
-            if(role.includes('f')) frgn++;
-            if(role.includes('bl')) overs += 4;
-            else { let m = role.match(/a(\d+)/); if(m) overs += parseInt(m[1]); }
-            
-            // 2. Calculate "Playing Today" Count
+        // 1. NEW: Count how many players in the ENTIRE squad are playing today
+        players.forEach(p => {
+            const actualIplTeam = String(p.IPL_Team || p.Franchise || p.IPL || p.Team || Object.values(p)[4] || "").trim().toUpperCase();
             const isPlayingToday = liveSchedule.some(m => 
                 m.date && m.date.includes(todayDateString) && (m.home === actualIplTeam || m.away === actualIplTeam)
             );
             if (isPlayingToday) todayCount++;
+        });
+
+        // 2. Calculate Overs and Foreigners from ONLY the checked players
+        const selectedObj = players.filter(p => selectedNames.includes(Object.values(p)[0]));
+        selectedObj.forEach(p => {
+            const role = (Object.values(p)[3] || "").toString().toLowerCase();
+            if(role.includes('f')) frgn++;
+            if(role.includes('bl')) overs += 4;
+            else { let m = role.match(/a(\d+)/); if(m) overs += parseInt(m[1]); }
         });
 
         // Update the screen
@@ -364,8 +364,6 @@
         // Colors for warnings / highlights
         document.getElementById('frgn').style.color = frgn > 4 ? "red" : "var(--accent)";
         document.getElementById('overs').style.color = overs < 20 ? "orange" : "var(--accent)";
-        
-        // Lights up green if you have players active today!
         document.getElementById('today-count').style.color = todayCount > 0 ? "#10b981" : "var(--accent)"; 
     }
 
