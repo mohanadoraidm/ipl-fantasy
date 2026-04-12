@@ -121,17 +121,14 @@
                 return;
             }
 
-            // --- NEW: DIAGNOSTIC CHECK ---
-            const scheduleCount = appData.schedule ? appData.schedule.length : 0;
-            console.log("Live Schedule Loaded:", scheduleCount, "matches");
-            // -----------------------------
+            // 🔴 ADD THIS ONE LINE 🔴
+            alert("Matches loaded: " + (appData.schedule ? appData.schedule.length : "ZERO! (Old Code)"));
 
             renderHome();
         } catch (err) {
-            document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Connection Failed:</b> Make sure you copied the correct Web App URL and deployed as "Anyone".</div>`;
+            document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Connection Failed...</b></div>`;
         }
     }
-
     function renderHome() {
         // 1. ULTRA-COMPACT PREDICTION CHART
         if (appData.leaderboard && appData.leaderboard.length > 0) {
