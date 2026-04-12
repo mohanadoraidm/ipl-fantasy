@@ -103,13 +103,14 @@
     let currentTeamPlayers = [];
 
     // The schedule to check for the "Playing Today" green dot
-    const matchSchedule = [
-        { date: "09/04/2026", home: "KKR", away: "LSG" },
-        { date: "10/04/2026", home: "RR", away: "RCB" },
-        { date: "11/04/2026", home: "PBKS", away: "SRH" },
-        { date: "11/04/2026", home: "CSK", away: "DC" }
-    ];
 
+    // --- DYNAMIC "PLAYING TODAY" CHECK ---
+                // We use appData.schedule instead of the hardcoded matchSchedule
+    const liveSchedule = appData.schedule || []; 
+                
+    isPlayingToday = liveSchedule.some(m => 
+    m.date && m.date.includes(todayDateString) && (m.home === actualIplTeam || m.away === actualIplTeam)
+    );
     async function init() {
         try {
             const res = await fetch(API_URL);
