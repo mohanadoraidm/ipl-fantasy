@@ -327,26 +327,9 @@
     }
 
    function updateStats(players) {
-        let overs = 0, frgn = 0, todayCount = 0;
-        
-        // Grab the live schedule and today's date
-        const liveSchedule = appData.schedule || []; 
-        const todayObj = new Date();
-        const dd = String(todayObj.getDate()).padStart(2, '0');
-        const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
-        const yyyy = todayObj.getFullYear();
-        const todayDateString = `${dd}/${mm}/${yyyy}`;
+        let overs = 0, frgn = 0;
 
-        // 1. NEW: Count how many players in the ENTIRE squad are playing today
-        players.forEach(p => {
-            const actualIplTeam = String(p.IPL_Team || p.Franchise || p.IPL || p.Team || Object.values(p)[4] || "").trim().toUpperCase();
-            const isPlayingToday = liveSchedule.some(m => 
-                m.date && m.date.includes(todayDateString) && (m.home === actualIplTeam || m.away === actualIplTeam)
-            );
-            if (isPlayingToday) todayCount++;
-        });
-
-        // 2. Calculate Overs and Foreigners from ONLY the checked players
+        // 1. Calculate Overs and Foreigners from ONLY the checked players
         const selectedObj = players.filter(p => selectedNames.includes(Object.values(p)[0]));
         selectedObj.forEach(p => {
             const role = (Object.values(p)[3] || "").toString().toLowerCase();
@@ -354,6 +337,10 @@
             if(role.includes('bl')) overs += 4;
             else { let m = role.match(/a(\d+)/); if(m) overs += parseInt(m[1]); }
         });
+
+        // 2. THE BULLETPROOF "TODAY" COUNTER
+        // It literally just counts the number of green dots actively drawn on your screen!
+        const todayCount = document.querySelectorAll('.playing-today-dot').length;
 
         // Update the screen
         document.getElementById('count').innerText = selectedNames.length;
