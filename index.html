@@ -66,7 +66,7 @@
 
         <div id="selection-page" style="display:none;">
             <div class="stats-bar" style="display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--accent); margin-bottom: 4px;">
-                <span style="font-size: 0.75rem;">Sel: <b id="count">0</b>/11 | Frg: <b id="frgn">0</b>/4 | Ov: <b id="overs">0</b></span>
+                <span style="font-size: 0.75rem;">Sel: <b id="count">0</b>/11 | Frg: <b id="frgn">0</b>/4 | Ov: <b id="overs">0</b> | Today: <b function updateStats(players)id="today-count">0</b></span>
                 <button onclick="autoSelectSquad()" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">⚡ AUTO</button>
             </div>
             
@@ -327,21 +327,46 @@
     }
 
     function updateStats(players) {
-        let overs = 0, frgn = 0;
+        let overs = 0, frgn = 0, todayCount = 0;
         const selectedObj = players.filter(p => selectedNames.includes(Object.values(p)[0]));
         
+        // Grab the live schedule and today's date
+        const liveSchedule = appData.schedule || []; 
+        const todayObj = new Date();
+        const dd = String(todayObj.getDate()).padStart(2, '0');
+        const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+        const yyyy = todayObj.getFullYear();
+        const todayDateString = `${dd}/${mm}/${yyyy}`;
+
         selectedObj.forEach(p => {
-            const role = (Object.values(p)[3] || "").toString().toLowerCase();
+            const vals = Object.values(p);
+            const role = (vals[3] || "").toString().toLowerCase();
+            const actualIplTeam = String(p.IPL_Team || p.Franchise || p.IPL || p.Team || vals[4] || "").trim().toUpperCase();
+            
+            // 1. Calculate Stats
             if(role.includes('f')) frgn++;
             if(role.includes('bl')) overs += 4;
             else { let m = role.match(/a(\d+)/); if(m) overs += parseInt(m[1]); }
+            
+            // 2. Calculate "Playing Today" Count
+            const isPlayingToday = liveSchedule.some(m => 
+                m.date && m.date.includes(todayDateString) && (m.home === actualIplTeam || m.away === actualIplTeam)
+            );
+            if (isPlayingToday) todayCount++;
         });
 
+        // Update the screen
         document.getElementById('count').innerText = selectedNames.length;
         document.getElementById('frgn').innerText = frgn;
         document.getElementById('overs').innerText = overs;
+        document.getElementById('today-count').innerText = todayCount;
+        
+        // Colors for warnings / highlights
         document.getElementById('frgn').style.color = frgn > 4 ? "red" : "var(--accent)";
         document.getElementById('overs').style.color = overs < 20 ? "orange" : "var(--accent)";
+        
+        // Lights up green if you have players active today!
+        document.getElementById('today-count').style.color = todayCount > 0 ? "#10b981" : "var(--accent)"; 
     }
 
     async function saveSelection(btn) {
