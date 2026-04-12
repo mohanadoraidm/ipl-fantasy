@@ -239,10 +239,11 @@
                 const isChecked = selectedNames.includes(fullName);
                 
                 // --- CRASH-PROOF TEAM GRABBER ---
-                // String() safely converts missing data to "" without crashing
-                // We check a few common column names here.
                 const actualIplTeam = String(p.IPL_Team || p.Franchise || p.IPL || p.Team || vals[4] || "").trim().toUpperCase();
                 
+                // --- DYNAMIC SCHEDULE CHECK ---
+                // Safely falls back to an empty array if schedule data is missing
+                const liveSchedule = appData.schedule || []; 
                 let isPlayingToday = false;
                 
                 // Get today's real date
@@ -252,7 +253,7 @@
                 const yyyy = todayObj.getFullYear();
                 const todayDateString = `${dd}/${mm}/${yyyy}`; 
 
-                isPlayingToday = matchSchedule.some(m => 
+                isPlayingToday = liveSchedule.some(m => 
                     m.date && m.date.includes(todayDateString) && (m.home === actualIplTeam || m.away === actualIplTeam)
                 );
                 
@@ -275,13 +276,11 @@
                         </div>
                     </div>`;
             } catch (err) {
-                // If one single player has corrupted data, skip them, but draw the rest of the team!
                 console.error("Skipped a player due to data error", err);
                 return "";
             }
         }).join('');
     }
-
     function togglePlayer(name, players) {
         if (selectedNames.includes(name)) {
             selectedNames = selectedNames.filter(n => n !== name);
