@@ -120,6 +120,12 @@
                 document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Sheet Error:</b> ${appData.error}</div>`;
                 return;
             }
+
+            // --- NEW: DIAGNOSTIC CHECK ---
+            const scheduleCount = appData.schedule ? appData.schedule.length : 0;
+            console.log("Live Schedule Loaded:", scheduleCount, "matches");
+            // -----------------------------
+
             renderHome();
         } catch (err) {
             document.getElementById('team-list').innerHTML = `<div class="error-box"><b>Connection Failed:</b> Make sure you copied the correct Web App URL and deployed as "Anyone".</div>`;
